@@ -1,29 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/Dashboard";
 import CreateDeckPage from "./pages/CreateDeckPage";
-import { supabase } from "./api/supabaseClient";
 import { Deck } from "./types/deck";
+import { fetchDecks } from "./features/decks/services/decksService";
 
 export default function FlashcardApp() {
   const [sets, setSets] = useState<Deck[]>([]);
   const [currentSetId, setCurrentSetId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSets();
+  const loadDecks = useCallback(async () => {
+    try {
+      const decks = await fetchDecks();
+      setSets(decks);
+    } catch (error) {
+      console.error("Failed to load decks", error);
+    }
   }, []);
 
-  async function fetchSets() {
-    const { data, error } = await supabase
-      .from("flashcard_sets")
-      .select("*, cards(*)");
-
-    if (error) {
-      console.error(error);
-    } else {
-      setSets(data as Deck[]);
-    }
-  }
+  useEffect(() => {
+    void loadDecks();
+  }, [loadDecks]);
 
   const currentSet = sets.find((s) => s.id === currentSetId);
 
@@ -39,11 +36,14 @@ export default function FlashcardApp() {
                 openSet={(id: string) => setCurrentSetId(id)}
               />
             ) : (
-              <div>Study mode for {currentSet.name}</div> // Placeholder
+              <div>Study mode for {currentSet.name}</div>
             )
           }
         />
-        <Route path="/create-deck" element={<CreateDeckPage />} />
+        <Route
+          path="/create-deck"
+          element={<CreateDeckPage onDeckCreated={loadDecks} />}
+        />
       </Routes>
     </Router>
   );
