@@ -1,7 +1,16 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { Deck } from "../../../types/deck";
-import { getDecks, insertCards, insertDeck } from "../api/decksRepository";
-import { CreateDeckInput } from "../types/deckContracts";
+import {
+  getDecks,
+  insertCards,
+  insertDeck,
+  NewCardPayload,
+  NewDeckPayload,
+} from "../api/decksRepository";
+
+export type CreateDeckInput = NewDeckPayload & {
+  cards: NewCardPayload[];
+};
 
 export async function fetchDecks(): Promise<Deck[]> {
   return getDecks();
@@ -23,7 +32,6 @@ export async function createDeck(input: CreateDeckInput): Promise<string> {
   const createdDeck = await insertDeck({
     name: sanitizedName,
     colorScheme: input.colorScheme,
-    cards: [],
   });
 
   try {
