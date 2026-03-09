@@ -39,7 +39,7 @@ export default function FlashcardApp() {
                 openSet={(id: string) => setCurrentSetId(id)}
               />
             ) : (
-              <div>Study mode for {currentSet.name}</div> // Placeholder
+              <div>Study mode for {currentSet.name}</div>
             )
           }
         />
