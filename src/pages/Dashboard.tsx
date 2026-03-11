@@ -4,15 +4,25 @@ import { Deck } from "../types/deck";
 import Navbar from "../components/Navbar";
 import DeckCard from "../features/decks/components/DeckCard";
 import CreateDeckCard from "../features/decks/components/CreateNewDeckCard";
+import { deleteDeck } from "../features/decks/services/deckServices";
 
 type DashboardProps = {
   sets: Deck[];
   openSet: (id: string) => void;
+  onDeckSaved: () => Promise<void>;
 };
 
-export default function Dashboard({ sets, openSet }: DashboardProps) {
+export default function Dashboard({
+  onDeckSaved,
+  sets,
+  openSet,
+}: DashboardProps) {
   const navigate = useNavigate();
 
+  const deleteDeckHandler = async (id: string) => {
+    await deleteDeck(id);
+    await onDeckSaved();
+  };
   return (
     <AnimatePresence mode="wait">
       <div className="min-h-screen  flex flex-col">
@@ -33,7 +43,12 @@ export default function Dashboard({ sets, openSet }: DashboardProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <CreateDeckCard onClick={() => navigate("/create-deck")} />
               {sets.map((deck) => (
-                <DeckCard key={deck.id} deck={deck} onOpen={openSet} />
+                <DeckCard
+                  key={deck.id}
+                  deck={deck}
+                  onOpen={openSet}
+                  onDelete={deleteDeckHandler}
+                />
               ))}
             </div>
           </div>

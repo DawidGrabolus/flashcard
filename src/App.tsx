@@ -2,29 +2,27 @@ import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/dashboard";
 import CreateDeckPage from "./pages/CreateDeckPage";
+import EditDeckPage from "./pages/EditDeckPage";
 import { supabase } from "./api/supabaseClient";
 import { Deck } from "./types/deck";
+import { fetchDecks } from "./features/decks/services/deckServices";
 
 export default function FlashcardApp() {
   const [sets, setSets] = useState<Deck[]>([]);
   const [currentSetId, setCurrentSetId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSets();
+    void loadSets();
   }, []);
 
-  async function fetchSets() {
-    const { data, error } = await supabase
-      .from("flashcard_sets")
-      .select("*, cards(*)");
-
-    if (error) {
-      console.error(error);
-    } else {
-      setSets(data as Deck[]);
-    }
+  async function loadSets() {
+    const data = await fetchDecks();
+    setSets(data);
   }
 
+  const refreshSets = async () => {
+    await loadSets();
+  };
   const currentSet = sets.find((s) => s.id === currentSetId);
 
   return (
@@ -34,7 +32,7 @@ export default function FlashcardApp() {
           path="/"
           element={
             !currentSet ? (
-              <Dashboard
+              <Dashboard onDeckSaved={refreshSets}
                 sets={sets}
                 openSet={(id: string) => setCurrentSetId(id)}
               />
@@ -43,7 +41,14 @@ export default function FlashcardApp() {
             )
           }
         />
-        <Route path="/create-deck" element={<CreateDeckPage />} />
+        <Route
+          path="/create-deck"
+          element={<CreateDeckPage onDeckSaved={refreshSets} />}
+        />
+        <Route
+          path="/decks/:deckId/edit"
+          element={<EditDeckPage onDeckSaved={refreshSets} />}
+        />{" "}
       </Routes>
     </Router>
   );

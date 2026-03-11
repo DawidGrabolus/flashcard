@@ -54,3 +54,36 @@ export async function insertCards(
     throw error;
   }
 }
+
+export async function getDeckById(id: string): Promise<Deck | null> {
+  const { data, error } = await supabase
+    .from("flashcard_sets")
+    .select("*, cards(*)")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Deck) || null;
+}
+
+export async function updateDeckName(
+  id: string,
+  newName: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("flashcard_sets")
+    .update({ name: newName })
+    .eq("id", id);
+}
+
+export async function deleteCards(id: string): Promise<void> {
+  const { error } = await supabase.from("cards").delete().eq("set_id", id);
+}
+
+export async function deleteDeck(id: string): Promise<void> {
+  await deleteCards(id);
+  const { error } = await supabase.from("flashcard_sets").delete().eq("id", id);
+}

@@ -1,29 +1,41 @@
 import { motion } from "framer-motion";
 import { Deck } from "../../../types/deck";
-import { Layers, Play } from "lucide-react";
+import { Edit3, Layers, Play, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const DeckCard = ({
   deck,
   onOpen,
+  onDelete,
 }: {
   deck: Deck;
   onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
 }) => {
-  const colorMap: Record<string, string> = {
-    primary: "from-primary/20 to-primary/5 text-primary bg-primary/10",
-    amber: "from-amber-500/20 to-amber-500/5 text-amber-500 bg-amber-500/10",
-    blue: "from-blue-500/20 to-blue-500/5 text-blue-500 bg-blue-500/10",
-    purple:
-      "from-purple-500/20 to-purple-500/5 text-purple-500 bg-purple-500/10",
-  };
-
-  const currentColors = colorMap[deck.colorScheme] || colorMap.primary;
+  const navigate = useNavigate();
+  const currentColors =
+    "from-primary/20 to-primary/5 text-primary bg-primary/10";
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className="group flex flex-col bg-slate-800/40 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-700/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+      className="relative group flex flex-col bg-slate-800/40 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-700/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
     >
+      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <button
+          onClick={() => navigate(`decks/${deck.id}/edit`)}
+          className="p-2 text-slate-400 hover:text-primary transition-colors"
+        >
+          <Edit3 size={18} />
+        </button>
+        <button
+          onClick={() => onDelete(deck.id)}
+          className="text-slate-400 hover:text-red-400 p-2"
+          //aria-label={`Remove card ${index + 1}`}
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
       <div
         className={`h-32 w-full bg-gradient-to-br ${currentColors.split(" ").slice(0, 2).join(" ")} relative`}
       >

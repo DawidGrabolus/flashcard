@@ -1,9 +1,13 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { Deck } from "../../../types/deck";
 import {
-  getDecks,
-  insertCards,
-  insertDeck,
+  getDecks as getDecksFromRepo,
+  getDeckById as getDeckByIdFromRepo,
+  insertCards as insertCardsFromRepo,
+  insertDeck as insertDeckFromRepo,
+  updateDeckName as updateDeckNameFromRepo,
+  deleteCards as deleteCardsFromRepo,
+  deleteDeck as deleteDeckFromRepo,
   NewCardPayload,
   NewDeckPayload,
 } from "../api/decksRepository";
@@ -11,9 +15,14 @@ import {
 export type CreateDeckInput = NewDeckPayload & {
   cards: NewCardPayload[];
 };
+export type UpdateDeckInput = {
+  deckId: string;
+  name: string;
+  cards: NewCardPayload[];
+};
 
 export async function fetchDecks(): Promise<Deck[]> {
-  return getDecks();
+  return getDecksFromRepo();
 }
 
 export async function createDeck(input: CreateDeckInput): Promise<string> {
@@ -29,12 +38,12 @@ export async function createDeck(input: CreateDeckInput): Promise<string> {
     throw new Error("Deck name is required");
   }
 
-  const createdDeck = await insertDeck({
+  const createdDeck = await insertDeckFromRepo({
     name: sanitizedName,
   });
 
   try {
-    await insertCards(createdDeck.id, sanitizedCards);
+    await insertCardsFromRepo(createdDeck.id, sanitizedCards);
   } catch (error) {
     const typedError = error as PostgrestError;
     throw new Error(
@@ -43,4 +52,39 @@ export async function createDeck(input: CreateDeckInput): Promise<string> {
   }
 
   return createdDeck.id;
+}
+
+export async function getDeckById(id: string): Promise<Deck | null> {
+  if (typeof id !== "string" || !id.trim()) {
+    throw new Error("Deck id is required and must be a non-empty string.");
+  }
+
+  const safeId = id.trim();
+
+  try {
+    const deck = await getDeckByIdFromRepo(safeId);
+
+    if (!deck) {
+      return null; // Może być 404 w logice wyższej warstwy
+    }
+
+    if (!deck.name || !deck.name.trim()) {
+      throw new Error("Invalid deck data retrieved from DB: missing name.");
+    }
+
+    return deck;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Failed to fetch deck by id: ${message}`);
+  }
+}
+
+export async function editDeck(input: UpdateDeckInput): Promise<void> {
+  await updateDeckNameFromRepo(input.deckId, input.name.trim());
+  await deleteCardsFromRepo(input.deckId);
+  await insertCardsFromRepo(input.deckId, input.cards);
+}
+
+export async function deleteDeck(id: string): Promise<void> {
+  await deleteDeckFromRepo(id);
 }

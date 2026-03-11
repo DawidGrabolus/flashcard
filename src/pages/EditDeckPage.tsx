@@ -1,21 +1,49 @@
-import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
-import { Settings, Plus, Save, Trash2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import React, { useState, useEffect, use } from "react";
+import { Settings, Plus, Save, Trash2, Edit } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createDeck } from "../features/decks/services/deckServices";
+import { createDeck, editDeck } from "../features/decks/services/deckServices";
 import { Card } from "../types/card";
+import { getDeckById } from "../features/decks/services/deckServices";
+import { Deck } from "../types/deck";
 
-type CreateDeckPageProps = {
+type EditDeckPageProps = {
   onDeckSaved: () => Promise<void>;
 };
 
-export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
+export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
+  const { deckId } = useParams<{ deckId: string }>();
+  const [isLoading, setIsLoading] = useState(true);
   const [name, setName] = useState("");
   const navigate = useNavigate();
   const [draftTerm, setDraftTerm] = useState("");
   const [draftAnswer, setDraftAnswer] = useState("");
   const [cards, setCards] = useState<Card[]>([]);
 
+  useEffect(() => {
+    async function loadDeck() {
+      if (!deckId) {
+        navigate("/");
+        return;
+      }
+
+      const deck = await getDeckById(deckId);
+      if (!deck) {
+        navigate("/");
+        return;
+      }
+
+      setName(deck.name);
+      setCards(deck.cards ?? []);
+      setIsLoading(false);
+    }
+
+    void loadDeck();
+  }, [deckId, navigate]);
+
+  const handleRemoveCard = (id: string) => {
+    setCards((prev) => prev.filter((card) => card.id !== id));
+  };
   const handleAddCard = () => {
     if (draftTerm.trim() && draftAnswer.trim()) {
       setCards((prev) => [
@@ -31,20 +59,25 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
     setDraftAnswer("");
   };
 
-  const handleRemoveCard = (id: string) => {
-    setCards((prev) => prev.filter((card) => card.id !== id));
-  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createDeck({
+
+    await editDeck({
+      deckId: deckId!,
       name,
       cards: cards.map((card) => ({ term: card.term, answer: card.answer })),
     });
-
     await onDeckSaved();
+
     navigate("/");
   };
-
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-slate-300">
+        Loading deck...
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col min-h-screen bg-background-dark text-slate-100 font-sans">
       <main className="flex-1 flex flex-col items-center px-4 py-8 max-w-5xl mx-auto w-full">
@@ -58,11 +91,9 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
           >
             <div className="flex flex-col gap-2">
               <h1 className="text-4xl font-black tracking-tight">
-                Create New Deck
+                Edit {name}
               </h1>
-              <p className="text-primary/60 text-lg">
-                Build a custom set of flashcards for your next study session.
-              </p>
+              <br />
             </div>
 
             <section className="bg-white/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
@@ -91,25 +122,25 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Front (Question)
+                    Front
                   </label>
                   <textarea
                     value={draftTerm}
                     onChange={(e) => setDraftTerm(e.target.value)}
                     className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="What is the powerhouse of the cell?"
+                    placeholder="Question"
                     rows={4}
                   ></textarea>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Back (Answer)
+                    Back
                   </label>
                   <textarea
                     value={draftAnswer}
                     onChange={(e) => setDraftAnswer(e.target.value)}
                     className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="Mitochondria"
+                    placeholder="Answer"
                     rows={4}
                   ></textarea>
                 </div>
@@ -154,8 +185,6 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
                 </ul>
               )}
             </section>
-
-            {/* Actions */}
             <div className="pt-6 border-t border-primary/20 flex flex-col md:flex-row gap-4 justify-between items-center mb-20">
               <button
                 onClick={() => navigate("/")}
