@@ -7,9 +7,35 @@
 }
 
 @layer base {
-  body {
-    @apply bg-bg-dark text-slate-100 font-sans antialiased;
+  html {
+    height: 100%;
+    scrollbar-gutter: stable;
+    overflow-y: auto;
+    background: var(--color-bg-dark);
   }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    @apply bg-bg-dark text-slate-100 font-sans antialiased;
+    overflow-y: auto;
+  }
+}
+
+/* Hidden scrollbar (still scrollable via wheel/trackpad) */
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap");

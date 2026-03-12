@@ -31,7 +31,6 @@ const DeckCard = ({
         <button
           onClick={() => onDelete(deck.id)}
           className="text-slate-400 hover:text-red-400 p-2"
-          //aria-label={`Remove card ${index + 1}`}
         >
           <Trash2 size={16} />
         </button>

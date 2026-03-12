@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import React, { useState, useEffect, use } from "react";
-import { Settings, Plus, Save, Trash2, Edit } from "lucide-react";
+import { Settings, Plus, Save, Trash2, Edit, Edit3, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createDeck, editDeck } from "../features/decks/services/deckServices";
 import { Card } from "../types/card";
@@ -19,6 +19,9 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   const [draftTerm, setDraftTerm] = useState("");
   const [draftAnswer, setDraftAnswer] = useState("");
   const [cards, setCards] = useState<Card[]>([]);
+  const [cardTermEdits, setCardTermEdits] = useState("");
+  const [cardAnswerEdits, setCardAnswerEdits] = useState("");
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDeck() {
@@ -44,6 +47,7 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   const handleRemoveCard = (id: string) => {
     setCards((prev) => prev.filter((card) => card.id !== id));
   };
+
   const handleAddCard = () => {
     if (draftTerm.trim() && draftAnswer.trim()) {
       setCards((prev) => [
@@ -57,6 +61,39 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
     }
     setDraftTerm("");
     setDraftAnswer("");
+  };
+
+  const handleEditCard = (card: Card) => {
+    setEditingCardId(card.id);
+    setCardTermEdits(card.term);
+    setCardAnswerEdits(card.answer);
+  };
+
+  const handleCancelEditCard = () => {
+    setEditingCardId(null);
+    setCardTermEdits("");
+    setCardAnswerEdits("");
+  };
+
+  const handleSaveEditedCard = (id: string) => {
+    const trimmedTerm = cardTermEdits.trim();
+    const trimmedAnswer = cardAnswerEdits.trim();
+
+    if (!trimmedTerm || !trimmedAnswer) {
+      return;
+    }
+
+    setCards((prev) =>
+      prev.map((card) =>
+        card.id === id
+          ? { ...card, term: trimmedTerm, answer: trimmedAnswer }
+          : card,
+      ),
+    );
+
+    setEditingCardId(null);
+    setCardTermEdits("");
+    setCardAnswerEdits("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,31 +194,85 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
 
               {cards.length > 0 && (
                 <ul className="mt-6 space-y-3">
-                  {cards.map((card, index) => (
-                    <li
-                      key={card.id}
-                      className="rounded-xl border border-primary/20 bg-white/5 px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-primary/70">
-                            Card {index + 1}
-                          </p>
-                          <p className="font-semibold">{card.term}</p>
-                          <p className="text-slate-400 text-sm mt-1">
-                            {card.answer}
-                          </p>
+                  {cards.map((card, index) => {
+                    const isEditing = editingCardId === card.id;
+                    return (
+                      <li
+                        key={card.id}
+                        className="rounded-xl border border-primary/20 bg-white/5 px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-primary/70">
+                              Card {index + 1}
+                            </p>
+                            {!isEditing ? (
+                              <>
+                                <p className="font-semibold">{card.term}</p>
+                                <p className="text-slate-400 text-sm mt-1">
+                                  {card.answer}
+                                </p>{" "}
+                              </>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                <textarea
+                                  value={cardTermEdits}
+                                  onChange={(e) =>
+                                    setCardTermEdits(e.target.value)
+                                  }
+                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
+                                  rows={3}
+                                />
+                                <textarea
+                                  value={cardAnswerEdits}
+                                  onChange={(e) =>
+                                    setCardAnswerEdits(e.target.value)
+                                  }
+                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
+                                  rows={3}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isEditing ? (
+                              <button
+                                onClick={() => handleEditCard(card)}
+                                className="p-2 text-slate-400 hover:text-primary transition-colors"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleSaveEditedCard(card.id)}
+                                  className="text-slate-400 hover:text-green-400"
+                                  aria-label={`Save card ${index + 1}`}
+                                >
+                                  <Save size={16} />
+                                </button>
+                                <button
+                                  onClick={handleCancelEditCard}
+                                  className="text-slate-400 hover:text-slate-100"
+                                  aria-label={`Cancel editing card ${index + 1}`}
+                                >
+                                  <X size={16} />
+                                </button>
+                              </>
+                            )}
+
+                            <button
+                              onClick={() => handleRemoveCard(card.id)}
+                              className="text-slate-400 hover:text-red-400"
+                              aria-label={`Remove card ${index + 1}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleRemoveCard(card.id)}
-                          className="text-slate-400 hover:text-red-400"
-                          aria-label={`Remove card ${index + 1}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>
