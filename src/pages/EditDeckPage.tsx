@@ -1,24 +1,19 @@
 import { useNavigate, useParams } from "react-router-dom";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Settings,
   Plus,
-  Save,
   Trash2,
-  Edit,
-  Edit3,
-  X,
   ChevronRight,
   Info,
   Upload,
-  GripVertical,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { createDeck, editDeck } from "../features/decks/services/deckServices";
+import { motion } from "framer-motion";
+import { editDeck } from "../features/decks/services/deckServices";
 import { FlashCard } from "../types/flashCard";
 import DeckCardList from "../components/DeckCardList";
 import { getDeckById } from "../features/decks/services/deckServices";
-import { Deck } from "../types/deck";
+import { parseFlashCardsFile } from "../features/decks/utils/flashcardImport";
 
 type EditDeckPageProps = {
   onDeckSaved: () => Promise<void>;
@@ -30,6 +25,8 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   const [name, setName] = useState("");
   const navigate = useNavigate();
   const [flashCards, setflashCards] = useState<FlashCard[]>([]);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadDeck() {
@@ -65,6 +62,28 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
         answer: "",
       },
     ]);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const importedCards = await parseFlashCardsFile(file);
+      setflashCards((prev) => [
+        ...prev,
+        ...importedCards.map((card) => ({ ...card, id: crypto.randomUUID() })),
+      ]);
+      setImportMessage(`Zaimportowano ${importedCards.length} fiszek z pliku.`);
+    } catch (error) {
+      setImportMessage(
+        error instanceof Error ? error.message : "Wystąpił błąd podczas importu.",
+      );
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,10 +213,24 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
             </div>
 
             <div className="flex flex-col gap-3">
-              <button className="flex items-center justify-center gap-2 w-full rounded-lg h-11 border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 w-full rounded-lg h-11 border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors"
+              >
                 <Upload size={18} />
-                Import CSV/Excel
+                Import CSV / TSV / TXT
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.tsv,.txt"
+                className="hidden"
+                onChange={handleImport}
+              />
+              {importMessage && (
+                <p className="text-xs text-slate-500">{importMessage}</p>
+              )}
               <button className="flex items-center justify-center gap-2 w-full rounded-lg h-11 bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors">
                 <Trash2 size={18} />
                 Archive Deck

@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
-import { Settings, Plus, Save, Trash2, Edit3, X, Upload } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useRef, useState } from "react";
+import { Plus, Upload } from "lucide-react";
+import { motion } from "framer-motion";
 import { createDeck } from "../features/decks/services/deckServices";
 import { FlashCard } from "../types/flashCard";
 import DeckCardList from "../components/DeckCardList";
+import { parseFlashCardsFile } from "../features/decks/utils/flashcardImport";
 
 type CreateDeckPageProps = {
   onDeckSaved: () => Promise<void>;
@@ -14,6 +15,8 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
   const [name, setName] = useState("");
   const navigate = useNavigate();
   const [flashCards, setCards] = useState<FlashCard[]>([]);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleAddCard = () => {
     setCards((prev) => [
@@ -28,6 +31,28 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
 
   const removeCard = (id: string) => {
     setCards((prev) => prev.filter((card) => card.id !== id));
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const importedCards = await parseFlashCardsFile(file);
+      setCards((prev) => [
+        ...prev,
+        ...importedCards.map((card) => ({ ...card, id: crypto.randomUUID() })),
+      ]);
+      setImportMessage(`Zaimportowano ${importedCards.length} fiszek z pliku.`);
+    } catch (error) {
+      setImportMessage(
+        error instanceof Error ? error.message : "Wystąpił błąd podczas importu.",
+      );
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,18 +147,32 @@ export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
               </form>
             </div>
           </div>
-          <div className="glass p-6 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary/50 transition-all">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="glass w-full p-6 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary/50 transition-all"
+          >
             <Upload
               className="text-primary/40 mb-2 group-hover:scale-110 transition-transform"
               size={32}
             />
             <p className="text-slate-500 text-sm font-medium">
-              Drag CSV or Excel to import
+              Importuj plik CSV / TSV / TXT
             </p>
             <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
               Max 500 cards
             </p>
-          </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.tsv,.txt"
+            className="hidden"
+            onChange={handleImport}
+          />
+          {importMessage && (
+            <p className="text-xs text-slate-500 text-center">{importMessage}</p>
+          )}
         </div>
 
         <div className="w-full lg:w-2/3 flex flex-col gap-4">
