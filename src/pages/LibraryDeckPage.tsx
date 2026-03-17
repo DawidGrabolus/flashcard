@@ -3,9 +3,14 @@ import { motion } from "framer-motion";
 import { Deck } from "../types/deck";
 import { EditedDeckCard } from "../features/decks/components/LibraryDeckComponent";
 import { deleteDeck, duplicateDeck } from "../features/decks/services/deckServices";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { downloadDeckCsv } from "../features/decks/utils/deckExport";
+import {
+  DeckProgressSummary,
+  getOrCreateDeviceSessionId,
+  loadProgressSummaryByDevice,
+} from "../features/study/services/studyProgressService";
 
 type LibraryViewProps = {
   decks: Deck[];
@@ -18,7 +23,44 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortType>("name-asc");
   const [minCards, setMinCards] = useState<number>(0);
+  const [progressByDeckId, setProgressByDeckId] = useState<Record<string, DeckProgressSummary>>({});
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!decks.length) {
+      setProgressByDeckId({});
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadProgress = async () => {
+      try {
+        const deviceSessionId = getOrCreateDeviceSessionId();
+        const cardCounts = decks.reduce<Record<string, number>>((acc, deck) => {
+          acc[deck.id] = deck.cards.length;
+          return acc;
+        }, {});
+        const summary = await loadProgressSummaryByDevice(deviceSessionId, cardCounts);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProgressByDeckId(summary);
+      } catch {
+        if (isMounted) {
+          setProgressByDeckId({});
+        }
+      }
+    };
+
+    void loadProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [decks]);
 
   const filteredDecks = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -123,15 +165,21 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {filteredDecks.map((deck) => (
-            <EditedDeckCard
-              key={deck.id}
-              deck={deck}
-              onDelete={deleteDeckHandler}
-              onDuplicate={duplicateDeckHandler}
-              onExport={downloadDeckCsv}
-            />
-          ))}
+          {filteredDecks.map((deck) => {
+            const progress = progressByDeckId[deck.id];
+
+            return (
+              <EditedDeckCard
+                key={deck.id}
+                deck={deck}
+                onDelete={deleteDeckHandler}
+                onDuplicate={duplicateDeckHandler}
+                onExport={downloadDeckCsv}
+                progressPercent={progress?.progressPercent ?? 0}
+                masteredCards={progress?.masteredCards ?? 0}
+              />
+            );
+          })}
 
           <div className="group relative overflow-hidden bg-primary/5 border-2 border-dashed border-primary/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-primary/10 transition-all min-h-[300px]">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">

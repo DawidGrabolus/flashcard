@@ -21,6 +21,21 @@ export async function getStudyProgressByDeckAndDevice(
   return data as StudyProgressRow | null;
 }
 
+export async function getStudyProgressByDevice(
+  deviceSessionId: string,
+): Promise<StudyProgressRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select("*")
+    .eq("device_session_id", deviceSessionId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as StudyProgressRow[];
+}
+
 export async function upsertStudyProgress(
   payload: StudyProgressPayload,
 ): Promise<void> {
