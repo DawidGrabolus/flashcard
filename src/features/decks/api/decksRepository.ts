@@ -1,9 +1,9 @@
 import { supabase } from "../../../api/supabaseClient";
-import { Card } from "../../../types/card";
+import { FlashCard } from "../../../types/flashCard";
 import { Deck } from "../../../types/deck";
 
 export type NewDeckPayload = Pick<Deck, "name">;
-export type NewCardPayload = Pick<Card, "term" | "answer">;
+export type NewCardPayload = Pick<FlashCard, "term" | "answer">;
 
 export async function getDecks(): Promise<Deck[]> {
   const { data, error } = await supabase

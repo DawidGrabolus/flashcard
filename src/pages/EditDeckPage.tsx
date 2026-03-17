@@ -1,9 +1,22 @@
 import { useNavigate, useParams } from "react-router-dom";
 import React, { useState, useEffect, use } from "react";
-import { Settings, Plus, Save, Trash2, Edit, Edit3, X } from "lucide-react";
+import {
+  Settings,
+  Plus,
+  Save,
+  Trash2,
+  Edit,
+  Edit3,
+  X,
+  ChevronRight,
+  Info,
+  Upload,
+  GripVertical,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createDeck, editDeck } from "../features/decks/services/deckServices";
-import { Card } from "../types/card";
+import { FlashCard } from "../types/flashCard";
+import DeckCardList from "../components/DeckCardList";
 import { getDeckById } from "../features/decks/services/deckServices";
 import { Deck } from "../types/deck";
 
@@ -16,12 +29,7 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [name, setName] = useState("");
   const navigate = useNavigate();
-  const [draftTerm, setDraftTerm] = useState("");
-  const [draftAnswer, setDraftAnswer] = useState("");
-  const [cards, setCards] = useState<Card[]>([]);
-  const [cardTermEdits, setCardTermEdits] = useState("");
-  const [cardAnswerEdits, setCardAnswerEdits] = useState("");
-  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [flashCards, setflashCards] = useState<FlashCard[]>([]);
 
   useEffect(() => {
     async function loadDeck() {
@@ -37,7 +45,7 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
       }
 
       setName(deck.name);
-      setCards(deck.cards ?? []);
+      setflashCards(deck.cards ?? []);
       setIsLoading(false);
     }
 
@@ -45,55 +53,18 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   }, [deckId, navigate]);
 
   const handleRemoveCard = (id: string) => {
-    setCards((prev) => prev.filter((card) => card.id !== id));
+    setflashCards((prev) => prev.filter((card) => card.id !== id));
   };
 
   const handleAddCard = () => {
-    if (draftTerm.trim() && draftAnswer.trim()) {
-      setCards((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          term: draftTerm.trim(),
-          answer: draftAnswer.trim(),
-        },
-      ]);
-    }
-    setDraftTerm("");
-    setDraftAnswer("");
-  };
-
-  const handleEditCard = (card: Card) => {
-    setEditingCardId(card.id);
-    setCardTermEdits(card.term);
-    setCardAnswerEdits(card.answer);
-  };
-
-  const handleCancelEditCard = () => {
-    setEditingCardId(null);
-    setCardTermEdits("");
-    setCardAnswerEdits("");
-  };
-
-  const handleSaveEditedCard = (id: string) => {
-    const trimmedTerm = cardTermEdits.trim();
-    const trimmedAnswer = cardAnswerEdits.trim();
-
-    if (!trimmedTerm || !trimmedAnswer) {
-      return;
-    }
-
-    setCards((prev) =>
-      prev.map((card) =>
-        card.id === id
-          ? { ...card, term: trimmedTerm, answer: trimmedAnswer }
-          : card,
-      ),
-    );
-
-    setEditingCardId(null);
-    setCardTermEdits("");
-    setCardAnswerEdits("");
+    setflashCards((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        term: "",
+        answer: "",
+      },
+    ]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,7 +73,10 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
     await editDeck({
       deckId: deckId!,
       name,
-      cards: cards.map((card) => ({ term: card.term, answer: card.answer })),
+      cards: flashCards.map((card) => ({
+        term: card.term,
+        answer: card.answer,
+      })),
     });
     await onDeckSaved();
 
@@ -115,185 +89,169 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
       </div>
     );
   }
-  return (
-    <div className="flex flex-col min-h-screen bg-background-dark text-slate-100 font-sans">
-      <main className="flex-1 flex flex-col items-center px-4 py-8 max-w-5xl mx-auto w-full">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key="create"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="w-full max-w-3xl space-y-8"
-          >
-            <div className="flex flex-col gap-2">
-              <h1 className="text-4xl font-black tracking-tight">
-                Edit {name}
-              </h1>
-              <br />
-            </div>
+  const saveTerm = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    flashCard: FlashCard,
+  ) => {
+    setflashCards((prev) =>
+      prev.map((c) =>
+        c.id === flashCard.id ? { ...c, term: e.target.value } : c,
+      ),
+    );
+  };
 
-            <section className="bg-white/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Settings size={20} className="text-primary" />
-                Deck Details
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+  const saveAnswer = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    flashCard: FlashCard,
+  ) => {
+    setflashCards((prev) =>
+      prev.map((c) =>
+        c.id === flashCard.id ? { ...c, answer: e.target.value } : c,
+      ),
+    );
+  };
+  return (
+    <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="space-y-8"
+      >
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
+          <button onClick={void 0} className="hover:text-primary">
+            Library
+          </button>
+          <ChevronRight size={14} />
+          <span className="hover:text-primary cursor-pointer">KATEGORIA</span>
+          <ChevronRight size={14} />
+          <span className="text-primary font-medium">Edit Deck</span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <aside className="lg:col-span-4 space-y-6">
+            <div className="bg-white p-6 rounded-xl border border-primary/10 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <Settings size={20} />
+                </div>
+                <h3 className="text-lg font-bold">Deck Settings</h3>
+              </div>
+              <div className="space-y-5">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold">Deck Title</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Deck Title
+                  </label>
                   <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary py-3 px-4 outline-none"
-                    placeholder="Name your deck"
                     type="text"
+                    onChange={(e) => setName(e.target.value)}
+                    defaultValue={name}
+                    className="w-full rounded-lg border-slate-200 bg-slate-50 focus:border-primary focus:ring-primary h-11 px-4 text-sm"
                   />
                 </div>
-              </div>
-            </section>
-            <section className="bg-white/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Plus size={20} className="text-primary" />
-                Add a New Card
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Front
+                  <label className="text-sm font-semibold text-slate-700">
+                    Description
                   </label>
                   <textarea
-                    value={draftTerm}
-                    onChange={(e) => setDraftTerm(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="Question"
-                    rows={4}
-                  ></textarea>
+                    defaultValue="opis"
+                    className="w-full rounded-lg border-slate-200 bg-slate-50 focus:border-primary focus:ring-primary p-4 text-sm"
+                    rows={3}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Back
+                  <label className="text-sm font-semibold text-slate-700">
+                    Category
                   </label>
-                  <textarea
-                    value={draftAnswer}
-                    onChange={(e) => setDraftAnswer(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="Answer"
-                    rows={4}
-                  ></textarea>
+                  <select className="w-full rounded-lg border-slate-200 bg-slate-50 focus:border-primary focus:ring-primary h-11 px-4 text-sm">
+                    <option>asd</option>
+                    <option>Science</option>
+                    <option>Languages</option>
+                  </select>
+                </div>
+                <div className="pt-2">
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" />
+                    <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    <span className="ml-3 text-sm font-medium text-slate-700">
+                      Public Access
+                    </span>
+                  </label>
                 </div>
               </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={handleAddCard}
-                  className="bg-primary/20 text-primary hover:bg-primary/30 font-bold py-3 px-8 rounded-xl transition-all flex items-center gap-2"
-                >
-                  <Plus size={18} />
-                  Add Card to List
-                </button>
+            </div>
+
+            <div className="bg-primary/5 border border-primary/20 p-6 rounded-xl">
+              <div className="flex items-center gap-2 text-primary font-bold mb-2">
+                <Info size={18} />
+                <h4>Pro Tip</h4>
               </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Use Markdown in your cards to highlight chemical formulas. You
+                can also drag and drop cards to reorder them for a specific
+                study flow.
+              </p>
+            </div>
 
-              {cards.length > 0 && (
-                <ul className="mt-6 space-y-3">
-                  {cards.map((card, index) => {
-                    const isEditing = editingCardId === card.id;
-                    return (
-                      <li
-                        key={card.id}
-                        className="rounded-xl border border-primary/20 bg-white/5 px-4 py-3"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-primary/70">
-                              Card {index + 1}
-                            </p>
-                            {!isEditing ? (
-                              <>
-                                <p className="font-semibold">{card.term}</p>
-                                <p className="text-slate-400 text-sm mt-1">
-                                  {card.answer}
-                                </p>{" "}
-                              </>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                <textarea
-                                  value={cardTermEdits}
-                                  onChange={(e) =>
-                                    setCardTermEdits(e.target.value)
-                                  }
-                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
-                                  rows={3}
-                                />
-                                <textarea
-                                  value={cardAnswerEdits}
-                                  onChange={(e) =>
-                                    setCardAnswerEdits(e.target.value)
-                                  }
-                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
-                                  rows={3}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!isEditing ? (
-                              <button
-                                onClick={() => handleEditCard(card)}
-                                className="p-2 text-slate-400 hover:text-primary transition-colors"
-                              >
-                                <Edit3 size={16} />
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => handleSaveEditedCard(card.id)}
-                                  className="text-slate-400 hover:text-green-400"
-                                  aria-label={`Save card ${index + 1}`}
-                                >
-                                  <Save size={16} />
-                                </button>
-                                <button
-                                  onClick={handleCancelEditCard}
-                                  className="text-slate-400 hover:text-slate-100"
-                                  aria-label={`Cancel editing card ${index + 1}`}
-                                >
-                                  <X size={16} />
-                                </button>
-                              </>
-                            )}
-
-                            <button
-                              onClick={() => handleRemoveCard(card.id)}
-                              className="text-slate-400 hover:text-red-400"
-                              aria-label={`Remove card ${index + 1}`}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-            <div className="pt-6 border-t border-primary/20 flex flex-col md:flex-row gap-4 justify-between items-center mb-20">
-              <button
-                onClick={() => navigate("/")}
-                className="text-slate-500 hover:text-slate-300 font-medium px-6 py-3 transition-colors"
-              >
-                Cancel & Discard
+            <div className="flex flex-col gap-3">
+              <button className="flex items-center justify-center gap-2 w-full rounded-lg h-11 border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors">
+                <Upload size={18} />
+                Import CSV/Excel
               </button>
-              <button
-                onClick={handleSubmit}
-                className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white font-bold py-4 px-12 rounded-2xl text-lg shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3"
-              >
-                <Save size={24} />
-                Save Entire Deck
+              <button className="flex items-center justify-center gap-2 w-full rounded-lg h-11 bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors">
+                <Trash2 size={18} />
+                Archive Deck
               </button>
             </div>
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+          </aside>
+
+          <div className="lg:col-span-8 space-y-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-baseline gap-2">
+                <h2 className="text-2xl font-black tracking-tight">Cards</h2>
+                <span className="text-slate-500 font-medium">
+                  ({flashCards.length} cards)
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {flashCards.length > 0 && (
+                <DeckCardList
+                  flashCards={flashCards}
+                  onRemoveCard={handleRemoveCard}
+                  setCardTermEdits={saveTerm}
+                  setCardAnswerEdits={saveAnswer}
+                />
+              )}
+
+              <div
+                onClick={handleAddCard}
+                className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-primary/40 hover:text-primary transition-all cursor-pointer bg-slate-50/50"
+              >
+                <Plus size={32} />
+                <span className="font-bold">Append New Card</span>
+              </div>
+            </div>
+
+            <div className="pl-12 mt-12 flex flex-wrap gap-4 items-center">
+              <button
+                onClick={handleSubmit}
+                className="flex-1 min-w-[160px] bg-primary text-white py-4 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                Save Deck
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="flex-1 min-w-[160px] bg-background-light text-slate-600 py-4 px-8 rounded-xl font-bold border border-slate-200 hover:bg-slate-100 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+      ;
+    </main>
   );
 }

@@ -1,64 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #0ca128;
-  --color-bg-dark: #102214;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #7f19e6;
+  --color-background-light: #f7f6f8;
+  --color-background-dark: #191121;
 }
 
 @layer base {
-  html {
-    height: 100%;
-    scrollbar-gutter: stable;
-    overflow-y: auto;
-    background: var(--color-bg-dark);
-  }
-
   body {
-    min-height: 100%;
-    margin: 0;
-    @apply bg-bg-dark text-slate-100 font-sans antialiased;
-    overflow-y: auto;
+    @apply bg-background-light text-slate-900 font-sans;
   }
 }
 
-/* Hidden scrollbar (still scrollable via wheel/trackpad) */
-* {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-*::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-thumb {
-  background: transparent;
-}
-
-@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap");
-@import "tailwindcss";
-
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-.flashcard-inner {
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
-}
-
-.flashcard-flip {
-  transform: rotateY(180deg);
-}
-
-.flashcard-front,
-.flashcard-back {
-  backface-visibility: hidden;
-}
-
-.flashcard-back {
-  transform: rotateY(180deg);
+.dark .glass {
+  background: rgba(25, 17, 33, 0.7);
+  border: 1px solid rgba(127, 25, 230, 0.2);
 }

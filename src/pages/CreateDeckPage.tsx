@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
-import { Settings, Plus, Save, Trash2, Edit3, X } from "lucide-react";
+import { Settings, Plus, Save, Trash2, Edit3, X, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createDeck } from "../features/decks/services/deckServices";
-import { Card } from "../types/card";
+import { FlashCard } from "../types/flashCard";
+import DeckCardList from "../components/DeckCardList";
 
 type CreateDeckPageProps = {
   onDeckSaved: () => Promise<void>;
@@ -12,259 +13,174 @@ type CreateDeckPageProps = {
 export default function CreateDeckPage({ onDeckSaved }: CreateDeckPageProps) {
   const [name, setName] = useState("");
   const navigate = useNavigate();
-  const [draftTerm, setDraftTerm] = useState("");
-  const [draftAnswer, setDraftAnswer] = useState("");
-  const [cards, setCards] = useState<Card[]>([]);
-  const [cardTermEdits, setCardTermEdits] = useState("");
-  const [cardAnswerEdits, setCardAnswerEdits] = useState("");
-  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [flashCards, setCards] = useState<FlashCard[]>([]);
 
   const handleAddCard = () => {
-    if (draftTerm.trim() && draftAnswer.trim()) {
-      setCards((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          term: draftTerm.trim(),
-          answer: draftAnswer.trim(),
-        },
-      ]);
-    }
-    setDraftTerm("");
-    setDraftAnswer("");
+    setCards((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        term: "",
+        answer: "",
+      },
+    ]);
   };
 
-  const handleRemoveCard = (id: string) => {
+  const removeCard = (id: string) => {
     setCards((prev) => prev.filter((card) => card.id !== id));
-  };
-
-  const handleEditCard = (card: Card) => {
-    setEditingCardId(card.id);
-    setCardTermEdits(card.term);
-    setCardAnswerEdits(card.answer);
-  };
-
-  const handleSaveEditedCard = (id: string) => {
-    const trimmedTerm = cardTermEdits.trim();
-    const trimmedAnswer = cardAnswerEdits.trim();
-
-    if (!trimmedTerm || !trimmedAnswer) {
-      return;
-    }
-
-    setCards((prev) =>
-      prev.map((card) =>
-        card.id === id
-          ? { ...card, term: trimmedTerm, answer: trimmedAnswer }
-          : card,
-      ),
-    );
-
-    setEditingCardId(null);
-    setCardTermEdits("");
-    setCardAnswerEdits("");
-  };
-
-  const handleCancelEditCard = () => {
-    setEditingCardId(null);
-    setCardTermEdits("");
-    setCardAnswerEdits("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await createDeck({
       name,
-      cards: cards.map((card) => ({ term: card.term, answer: card.answer })),
+      cards: flashCards.map((flashCard) => ({
+        term: flashCard.term,
+        answer: flashCard.answer,
+      })),
     });
 
     await onDeckSaved();
     navigate("/");
   };
 
+  const saveTerm = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    flashCard: FlashCard,
+  ) => {
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === flashCard.id ? { ...c, term: e.target.value } : c,
+      ),
+    );
+  };
+
+  const saveAnswer = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    flashCard: FlashCard,
+  ) => {
+    setCards((prev) =>
+      prev.map((c) =>
+        c.id === flashCard.id ? { ...c, answer: e.target.value } : c,
+      ),
+    );
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-background-dark text-slate-100 font-sans">
-      <main className="flex-1 flex flex-col items-center px-4 py-8 max-w-5xl mx-auto w-full">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key="create"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="w-full max-w-3xl space-y-8"
-          >
-            <div className="flex flex-col gap-2">
-              <h1 className="text-4xl font-black tracking-tight">
+    <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="flex flex-col lg:flex-row gap-8 items-start"
+      >
+        <div className="w-full lg:w-1/3 flex flex-col gap-6 sticky top-24">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary translate-x-2 translate-y-2 rounded-2xl opacity-10" />
+            <div className="relative glass p-8 rounded-2xl border border-primary/10">
+              <h1 className="text-3xl font-black text-slate-900 mb-2 leading-tight">
                 Create New Deck
               </h1>
-              <p className="text-primary/60 text-lg">
-                Build a custom set of flashcards for your next study session.
+              <p className="text-slate-500 text-sm mb-8">
+                Master any subject by organizing your custom flashcard
+                collection.
               </p>
-            </div>
-
-            <section className="bg-white/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Settings size={20} className="text-primary" />
-                Deck Details
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold">Deck Title</label>
+              <form className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Deck Title
+                  </label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary py-3 px-4 outline-none"
-                    placeholder="Name your deck"
                     type="text"
+                    placeholder="e.g. Advanced Neuroscience"
+                    className="w-full bg-background-light border border-primary/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   />
                 </div>
-              </div>
-            </section>
-            <section className="bg-white/5 p-6 rounded-2xl border border-primary/10 shadow-sm">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Plus size={20} className="text-primary" />
-                Add a New Card
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Front (Question)
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Category
+                  </label>
+                  <select className="w-full bg-background-light border border-primary/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition-all appearance-none">
+                    <option>Science</option>
+                    <option>Languages</option>
+                    <option>History</option>
+                    <option>Technology</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Description
                   </label>
                   <textarea
-                    value={draftTerm}
-                    onChange={(e) => setDraftTerm(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="What is the powerhouse of the cell?"
-                    rows={4}
-                  ></textarea>
+                    placeholder="What will you learn today?"
+                    className="w-full bg-background-light border border-primary/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition-all min-h-[100px] resize-none"
+                  />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Back (Answer)
-                  </label>
-                  <textarea
-                    value={draftAnswer}
-                    onChange={(e) => setDraftAnswer(e.target.value)}
-                    className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-4 outline-none resize-none"
-                    placeholder="Mitochondria"
-                    rows={4}
-                  ></textarea>
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={handleAddCard}
-                  className="bg-primary/20 text-primary hover:bg-primary/30 font-bold py-3 px-8 rounded-xl transition-all flex items-center gap-2"
-                >
-                  <Plus size={18} />
-                  Add Card to List
-                </button>
-              </div>
-
-              {cards.length > 0 && (
-                <ul className="mt-6 space-y-3">
-                  {cards.map((card, index) => {
-                    const isEditing = editingCardId === card.id;
-                    return (
-                      <li
-                        key={card.id}
-                        className="rounded-xl border border-primary/20 bg-white/5 px-4 py-3"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-primary/70">
-                              Card {index + 1}
-                            </p>
-                            {!isEditing ? (
-                              <>
-                                <p className="font-semibold">{card.term}</p>
-                                <p className="text-slate-400 text-sm mt-1">
-                                  {card.answer}
-                                </p>
-                              </>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                                <textarea
-                                  value={cardTermEdits}
-                                  onChange={(e) =>
-                                    setCardTermEdits(e.target.value)
-                                  }
-                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
-                                  rows={3}
-                                />
-                                <textarea
-                                  value={cardAnswerEdits}
-                                  onChange={(e) =>
-                                    setCardAnswerEdits(e.target.value)
-                                  }
-                                  className="w-full rounded-xl bg-white/5 border border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary p-3 outline-none resize-none"
-                                  rows={3}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!isEditing ? (
-                              <button
-                                onClick={() => handleEditCard(card)}
-                                className="p-2 text-slate-400 hover:text-primary transition-colors"
-                              >
-                                <Edit3 size={16} />
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => handleSaveEditedCard(card.id)}
-                                  className="text-slate-400 hover:text-green-400"
-                                  aria-label={`Save card ${index + 1}`}
-                                >
-                                  <Save size={16} />
-                                </button>
-                                <button
-                                  onClick={handleCancelEditCard}
-                                  className="text-slate-400 hover:text-slate-100"
-                                  aria-label={`Cancel editing card ${index + 1}`}
-                                >
-                                  <X size={16} />
-                                </button>
-                              </>
-                            )}
-
-                            <button
-                              onClick={() => handleRemoveCard(card.id)}
-                              className="text-slate-400 hover:text-red-400"
-                              aria-label={`Remove card ${index + 1}`}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-
-            {/* Actions */}
-            <div className="pt-6 border-t border-primary/20 flex flex-col md:flex-row gap-4 justify-between items-center mb-20">
-              <button
-                onClick={() => navigate("/")}
-                className="text-slate-500 hover:text-slate-300 font-medium px-6 py-3 transition-colors"
-              >
-                Cancel & Discard
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white font-bold py-4 px-12 rounded-2xl text-lg shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3"
-              >
-                <Save size={24} />
-                Save Entire Deck
-              </button>
+              </form>
             </div>
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+          </div>
+          <div className="glass p-6 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary/50 transition-all">
+            <Upload
+              className="text-primary/40 mb-2 group-hover:scale-110 transition-transform"
+              size={32}
+            />
+            <p className="text-slate-500 text-sm font-medium">
+              Drag CSV or Excel to import
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
+              Max 500 cards
+            </p>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-2/3 flex flex-col gap-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              FlashCard
+              <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                {flashCards.length}
+              </span>
+            </h3>
+          </div>
+
+          {flashCards.length > 0 && (
+            <DeckCardList
+              flashCards={flashCards}
+              onRemoveCard={removeCard}
+              setCardTermEdits={saveTerm}
+              setCardAnswerEdits={saveAnswer}
+            />
+          )}
+
+          <div className="pl-12 mt-4">
+            <button
+              onClick={handleAddCard}
+              className="w-full py-4 rounded-2xl border-2 border-primary/30 border-dashed text-primary font-bold hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              Add Flashcard
+            </button>
+          </div>
+
+          <div className="pl-12 mt-12 flex flex-wrap gap-4 items-center">
+            <button
+              onClick={handleSubmit}
+              className="flex-1 min-w-[160px] bg-primary text-white py-4 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              Save Deck
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="flex-1 min-w-[160px] bg-background-light text-slate-600 py-4 px-8 rounded-xl font-bold border border-slate-200 hover:bg-slate-100 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </main>
   );
 }
