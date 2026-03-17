@@ -1,8 +1,12 @@
 import { Deck } from "../../../types/deck";
 import { Library } from "lucide-react";
 import cover from "../../../assets/cover1.png";
+import { nav } from "framer-motion/client";
 
 export const DeckCard = ({ deck }: { deck: Deck }) => {
+  const startStudyingHandler = () => {
+    navigate(`/decks/${deck.id}/study`);
+  };
   return (
     <div
       key={deck.id}
@@ -42,7 +46,8 @@ export const DeckCard = ({ deck }: { deck: Deck }) => {
             {deck.cards.length} Cards
           </span>
         </div>
-        <button className="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg text-sm transition-all shadow-md shadow-primary/20">
+        <button className="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg text-sm transition-all shadow-md shadow-primary/20"
+        onClick={ () =>}>
           Start Studying
         </button>
       </div>

@@ -13,6 +13,7 @@ import { fetchDecks } from "./features/decks/services/deckServices";
 import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "./components/Navbar";
 import LibraryDeckPage from "./pages/LibraryDeckPage";
+import StudyPage from "./pages/StudyPage";
 
 type PageTransitionProps = {
   children: React.ReactNode;
@@ -86,6 +87,14 @@ function AppRoutes({
             element={
               <PageTransition>
                 <LibraryDeckPage decks={sets} onDeckSaved={refreshSets} />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/decks/:deckId/study"
+            element={
+              <PageTransition>
+                <StudyPage />
               </PageTransition>
             }
           />
