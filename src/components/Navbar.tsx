@@ -48,27 +48,9 @@ export default function Navbar() {
         >
           Explore
         </button>
-        <button
-          onClick={() => go("study", "/study")}
-          className={`text-sm font-semibold transition-colors ${currentView === "study" ? "text-primary" : "text-slate-600 hover:text-primary"}`}
-        >
-          Study
-        </button>
       </nav>
 
-      <div className="flex items-center gap-4">
-        <button className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all">
-          <Bell size={20} />
-        </button>
-        <div className="size-10 rounded-full border-2 border-primary/20 overflow-hidden cursor-pointer">
-          <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100"
-            alt="Profile"
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      </div>
+      <div className="flex items-center gap-4">d</div>
     </header>
   );
 }
