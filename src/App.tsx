@@ -35,12 +35,10 @@ function PageTransition({ children }: PageTransitionProps) {
 
 function AppRoutes({
   sets,
-  currentSet,
   refreshSets,
   setCurrentSetId,
 }: {
   sets: Deck[];
-  currentSet: Deck | undefined;
   refreshSets: () => Promise<void>;
   setCurrentSetId: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
@@ -121,13 +119,10 @@ export default function FlashcardApp() {
     await loadSets();
   };
 
-  const currentSet = sets.find((s) => s.id === currentSetId);
-
   return (
     <Router>
       <AppRoutes
         sets={sets}
-        currentSet={currentSet}
         refreshSets={refreshSets}
         setCurrentSetId={setCurrentSetId}
       />

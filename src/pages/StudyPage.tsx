@@ -6,6 +6,7 @@ import {
   Home,
   RefreshCw,
   RotateCcw,
+  Shuffle,
   Sparkles,
   X,
   XCircle,
@@ -13,6 +14,9 @@ import {
   Smile,
   CloudCheck,
   CloudAlert,
+  HelpCircle,
+  Lightbulb,
+  SkipForward,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Deck } from "../types/deck";
@@ -64,6 +68,39 @@ const levenshteinDistance = (a: string, b: string): number => {
   return matrix[rows - 1][cols - 1];
 };
 
+const shuffleArray = <T,>(values: T[]): T[] => {
+  const copy = [...values];
+
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy;
+};
+
+const insertAtRandomPosition = (queue: number[], value: number): number[] => {
+  const result = [...queue];
+  const index = Math.floor(Math.random() * (result.length + 1));
+  result.splice(index, 0, value);
+  return result;
+};
+
+const buildHint = (solution: string): string => {
+  const trimmed = solution.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.length <= 2) {
+    return `${trimmed[0] ?? ""}…`;
+  }
+
+  const visibleCount = Math.max(1, Math.round(trimmed.length * 0.35));
+  return `${trimmed.slice(0, visibleCount)}${"•".repeat(Math.max(1, trimmed.length - visibleCount))}`;
+};
+
 const isAnswerCorrect = (answer: string, solution: string): boolean => {
   const normalizedAnswer = normalize(answer);
   const normalizedSolution = normalize(solution);
@@ -98,6 +135,11 @@ export default function StudyPage() {
   const [sessionId, setSessionId] = useState<string>("");
   const [isHydratedFromDb, setIsHydratedFromDb] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [isRandomOrder, setIsRandomOrder] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [hintText, setHintText] = useState("");
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   const currentCardIndex = roundQueue[0] ?? null;
   const currentCard =
@@ -301,6 +343,16 @@ export default function StudyPage() {
           applyCardResult(true);
         }
       }
+
+      if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        handleSkipCard();
+      }
+
+      if (event.key === "?") {
+        event.preventDefault();
+        setIsHelpOpen((prev) => !prev);
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -313,6 +365,7 @@ export default function StudyPage() {
     setIsSubmitted(false);
     setIsCorrect(null);
     setIsFlipped(false);
+    setHintText("");
   };
 
   const moveToNextRoundIfNeeded = (queue: number[], remaining: number[]) => {
@@ -323,7 +376,12 @@ export default function StudyPage() {
     const nextRoundQueue = remaining.slice(0, ROUND_SIZE);
     const nextRemainingQueue = remaining.slice(ROUND_SIZE);
 
-    return { nextRoundQueue, nextRemainingQueue };
+    return {
+      nextRoundQueue: isRandomOrder ? shuffleArray(nextRoundQueue) : nextRoundQueue,
+      nextRemainingQueue: isRandomOrder
+        ? shuffleArray(nextRemainingQueue)
+        : nextRemainingQueue,
+    };
   };
 
   const applyCardResult = (known: boolean) => {
@@ -332,12 +390,23 @@ export default function StudyPage() {
     }
 
     const restQueue = roundQueue.slice(1);
-    const nextQueue = known ? restQueue : [...restQueue, currentCardIndex];
+    const nextQueue = known
+      ? restQueue
+      : isRandomOrder
+        ? insertAtRandomPosition(restQueue, currentCardIndex)
+        : [...restQueue, currentCardIndex];
 
     if (known) {
       setMasteredCardIds((prev) =>
         prev.includes(currentCard.id) ? prev : [...prev, currentCard.id],
       );
+      setCurrentStreak((prev) => {
+        const next = prev + 1;
+        setBestStreak((best) => Math.max(best, next));
+        return next;
+      });
+    } else {
+      setCurrentStreak(0);
     }
 
     const { nextRoundQueue, nextRemainingQueue } = moveToNextRoundIfNeeded(
@@ -348,6 +417,29 @@ export default function StudyPage() {
     setRoundQueue(nextRoundQueue);
     setRemainingQueue(nextRemainingQueue);
     resetCardState();
+  };
+
+  const handleSkipCard = () => {
+    if (!currentCard || currentCardIndex === null) {
+      return;
+    }
+
+    const restQueue = roundQueue.slice(1);
+    const skippedQueue = isRandomOrder
+      ? insertAtRandomPosition(restQueue, currentCardIndex)
+      : [...restQueue, currentCardIndex];
+
+    setRoundQueue(skippedQueue);
+    setCurrentStreak(0);
+    resetCardState();
+  };
+
+  const revealHint = () => {
+    if (!solutionText) {
+      return;
+    }
+
+    setHintText(buildHint(solutionText));
   };
 
   const handleSubmit = (event?: FormEvent) => {
@@ -361,15 +453,34 @@ export default function StudyPage() {
     setIsSubmitted(true);
   };
 
+  const toggleRandomOrder = () => {
+    const nextRandomState = !isRandomOrder;
+    setIsRandomOrder(nextRandomState);
+
+    if (!nextRandomState) {
+      return;
+    }
+
+    const [current, ...rest] = roundQueue;
+    const shuffledRound = current === undefined ? shuffleArray(rest) : [current, ...shuffleArray(rest)];
+
+    setRoundQueue(shuffledRound);
+    setRemainingQueue(shuffleArray(remainingQueue));
+  };
+
   const restartSession = async () => {
     if (!deck || !sessionId) {
       return;
     }
 
     const indexes = deck.cards.map((_, index) => index);
-    setRoundQueue(indexes.slice(0, ROUND_SIZE));
-    setRemainingQueue(indexes.slice(ROUND_SIZE));
+    const orderedIndexes = isRandomOrder ? shuffleArray(indexes) : indexes;
+
+    setRoundQueue(orderedIndexes.slice(0, ROUND_SIZE));
+    setRemainingQueue(orderedIndexes.slice(ROUND_SIZE));
     setMasteredCardIds([]);
+    setCurrentStreak(0);
+    setBestStreak(0);
     setMode("flashcard");
     setDirection("termToAnswer");
     resetCardState();
@@ -445,6 +556,24 @@ export default function StudyPage() {
             <Home className="size-4" />
             Strona główna
           </button>
+
+          <button
+            onClick={handleSkipCard}
+            className="h-10 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold inline-flex items-center gap-2 hover:border-primary hover:text-primary transition-colors"
+          >
+            <SkipForward className="size-4" />
+            Pomiń
+          </button>
+
+          {mode === "typing" && !isSubmitted && (
+            <button
+              onClick={revealHint}
+              className="h-10 px-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 font-semibold inline-flex items-center gap-2 hover:bg-amber-100 transition-colors"
+            >
+              <Lightbulb className="size-4" />
+              Podpowiedź
+            </button>
+          )}
         </div>
       </motion.div>
     );
@@ -462,6 +591,24 @@ export default function StudyPage() {
           >
             <X className="size-5" />
           </button>
+
+          <button
+            onClick={handleSkipCard}
+            className="h-10 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold inline-flex items-center gap-2 hover:border-primary hover:text-primary transition-colors"
+          >
+            <SkipForward className="size-4" />
+            Pomiń
+          </button>
+
+          {mode === "typing" && !isSubmitted && (
+            <button
+              onClick={revealHint}
+              className="h-10 px-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 font-semibold inline-flex items-center gap-2 hover:bg-amber-100 transition-colors"
+            >
+              <Lightbulb className="size-4" />
+              Podpowiedź
+            </button>
+          )}
         </div>
 
         <div className="grid md:grid-cols-[auto_1fr_auto] gap-3 items-center">
@@ -498,6 +645,7 @@ export default function StudyPage() {
                 {masteredCardIds.length} / {cardsCount} opanowanych
               </span>
               <span className="text-slate-500 text-xs">{queueStatsText}</span>
+              <span className="text-slate-500 text-xs">Streak: {currentStreak} • Best: {bestStreak}</span>
             </div>
           </div>
 
@@ -518,7 +666,23 @@ export default function StudyPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center py-6 px-2 max-w-[760px] mx-auto w-full">
-        <div className="mb-6 w-full flex justify-center">
+        <div className="mb-4 w-full flex justify-center">
+          <button
+            onClick={() => setIsHelpOpen((prev) => !prev)}
+            className="h-9 px-3 rounded-lg border border-slate-300 bg-white text-slate-600 text-xs font-semibold inline-flex items-center gap-2 hover:border-primary hover:text-primary transition-colors"
+          >
+            <HelpCircle className="size-4" />
+            Skróty
+          </button>
+        </div>
+
+        {isHelpOpen && (
+          <div className="mb-4 w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
+            <p><b>Spacja</b> – odwróć kartę, <b>1</b> – powtórz, <b>2</b> – umiem, <b>S</b> – pomiń kartę, <b>?</b> – skróty.</p>
+          </div>
+        )}
+
+        <div className="mb-6 w-full flex justify-center gap-3 flex-wrap">
           <button
             onClick={() =>
               setDirection((prev) =>
@@ -530,6 +694,36 @@ export default function StudyPage() {
             <RefreshCw className="size-4" />
             {direction === "termToAnswer" ? "EN → PL" : "PL → EN"}
           </button>
+
+          <button
+            onClick={toggleRandomOrder}
+            className={`h-10 px-4 rounded-lg border font-semibold inline-flex items-center gap-2 transition-colors ${
+              isRandomOrder
+                ? "border-primary bg-primary text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:border-primary hover:text-primary"
+            }`}
+          >
+            <Shuffle className="size-4" />
+            {isRandomOrder ? "Losowość: ON" : "Losowość: OFF"}
+          </button>
+
+          <button
+            onClick={handleSkipCard}
+            className="h-10 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold inline-flex items-center gap-2 hover:border-primary hover:text-primary transition-colors"
+          >
+            <SkipForward className="size-4" />
+            Pomiń
+          </button>
+
+          {mode === "typing" && !isSubmitted && (
+            <button
+              onClick={revealHint}
+              className="h-10 px-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 font-semibold inline-flex items-center gap-2 hover:bg-amber-100 transition-colors"
+            >
+              <Lightbulb className="size-4" />
+              Podpowiedź
+            </button>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
@@ -623,6 +817,11 @@ export default function StudyPage() {
                         className="w-full rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 border-2 border-slate-200 bg-slate-50 h-16 px-5 text-xl font-medium placeholder:text-slate-400 transition-all"
                       />
                     </div>
+                    {hintText && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Podpowiedź: <span className="font-bold">{hintText}</span>
+                      </div>
+                    )}
                     <button
                       type="submit"
                       className="w-full flex items-center justify-center rounded-xl h-14 bg-primary text-white text-lg font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]"
