@@ -1,6 +1,6 @@
 import { Library, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import cover from "../../../assets/cover1.png";
+import { getCoverByKey } from "../utils/deckCover";
 import { Deck } from "../../../types/deck";
 
 type DeckCardProps = {
@@ -19,6 +19,7 @@ export const DeckCard = ({
   const freshnessLabel = deck.created_at
     ? new Date(deck.created_at).toLocaleDateString()
     : "Recently";
+  const cover = getCoverByKey(deck.cover_key, deck.id);
 
   return (
     <div className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 hover:border-primary/40 transition-all flex flex-col h-full">

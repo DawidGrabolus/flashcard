@@ -29,6 +29,7 @@ import { StudyDirection, StudyMode } from "../types/studyProgress";
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 const ROUND_SIZE = 20;
+const DEFAULT_TEST_SIZE = 30;
 
 const MODE_LABELS: Record<StudyMode, string> = {
   flashcard: "Flashcards",
@@ -121,8 +122,16 @@ export default function StudyPage() {
   const [isRandomOrder, setIsRandomOrder] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
+  const [testQuestionCount, setTestQuestionCount] = useState(DEFAULT_TEST_SIZE);
+  const [testQueue, setTestQueue] = useState<number[]>([]);
+  const [testIndex, setTestIndex] = useState(0);
+  const [testCorrectAnswers, setTestCorrectAnswers] = useState(0);
+  const [isTestStarted, setIsTestStarted] = useState(false);
+  const [isTestCompleted, setIsTestCompleted] = useState(false);
 
-  const currentCardIndex = roundQueue[0] ?? null;
+  const currentCardIndex = isTestStarted
+    ? (testQueue[testIndex] ?? null)
+    : (roundQueue[0] ?? null);
   const currentCard =
     currentCardIndex !== null ? (deck?.cards[currentCardIndex] ?? null) : null;
   const cardsCount = deck?.cards.length ?? 0;
@@ -141,10 +150,19 @@ export default function StudyPage() {
     () => `${roundQueue.length} aktywnych • ${remainingQueue.length} później`,
     [remainingQueue.length, roundQueue.length],
   );
+  const testStatsText = `${Math.min(testIndex + 1, testQueue.length)}/${testQueue.length}`;
 
   useEffect(() => {
     setSessionId(getOrCreateDeviceSessionId());
   }, []);
+
+  useEffect(() => {
+    if (!cardsCount) {
+      return;
+    }
+
+    setTestQuestionCount(Math.min(DEFAULT_TEST_SIZE, cardsCount));
+  }, [cardsCount]);
 
   useEffect(() => {
     let isMounted = true;
@@ -270,7 +288,7 @@ export default function StudyPage() {
   }, [deck, sessionId]);
 
   useEffect(() => {
-    if (!deck || !sessionId || !isHydratedFromDb) {
+    if (!deck || !sessionId || !isHydratedFromDb || isTestStarted) {
       return;
     }
 
@@ -302,6 +320,7 @@ export default function StudyPage() {
     remainingQueue,
     roundQueue,
     sessionId,
+    isTestStarted,
   ]);
 
   useEffect(() => {
@@ -356,6 +375,10 @@ export default function StudyPage() {
   };
 
   const applyCardResult = (known: boolean) => {
+    if (isTestStarted) {
+      return;
+    }
+
     if (!currentCard || currentCardIndex === null) {
       return;
     }
@@ -387,6 +410,46 @@ export default function StudyPage() {
 
     setRoundQueue(nextRoundQueue);
     setRemainingQueue(nextRemainingQueue);
+    resetCardState();
+  };
+
+  const startTest = () => {
+    if (!deck || !deck.cards.length) {
+      return;
+    }
+
+    const safeCount = Math.min(Math.max(testQuestionCount, 1), deck.cards.length);
+    const indexes = deck.cards.map((_, index) => index);
+    const randomSample = shuffleArray(indexes).slice(0, safeCount);
+
+    setTestQueue(randomSample);
+    setTestIndex(0);
+    setTestCorrectAnswers(0);
+    setIsTestCompleted(false);
+    setIsTestStarted(true);
+    setMode("typing");
+    setDirection("termToAnswer");
+    resetCardState();
+  };
+
+  const handleTestNext = () => {
+    if (!isTestStarted) {
+      return;
+    }
+
+    const nextCorrectAnswers = isCorrect ? testCorrectAnswers + 1 : testCorrectAnswers;
+    const isLastQuestion = testIndex >= testQueue.length - 1;
+
+    if (isLastQuestion) {
+      setTestCorrectAnswers(nextCorrectAnswers);
+      setIsTestCompleted(true);
+      setIsTestStarted(false);
+      resetCardState();
+      return;
+    }
+
+    setTestCorrectAnswers(nextCorrectAnswers);
+    setTestIndex((prev) => prev + 1);
     resetCardState();
   };
 
@@ -432,6 +495,11 @@ export default function StudyPage() {
     setBestStreak(0);
     setMode("flashcard");
     setDirection("termToAnswer");
+    setIsTestStarted(false);
+    setIsTestCompleted(false);
+    setTestCorrectAnswers(0);
+    setTestIndex(0);
+    setTestQueue([]);
     resetCardState();
 
     try {
@@ -480,16 +548,30 @@ export default function StudyPage() {
     );
   }
 
-  if (isCompleted || !currentCard || !promptText || !solutionText) {
+  if (isTestCompleted || isCompleted || !currentCard || !promptText || !solutionText) {
+    const testPercent = testQueue.length
+      ? Math.round((testCorrectAnswers / testQueue.length) * 100)
+      : 0;
+
     return (
       <motion.div className="max-w-2xl mx-auto min-h-[65vh] flex flex-col items-center justify-center text-center gap-6">
         <div className="size-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
           <CheckCircle className="size-8" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900">Sesja ukończona 🎉</h1>
-        <p className="text-slate-600">
-          Przerobiłeś wszystkie karty z talii <strong>{deck.name}</strong>.
-        </p>
+        <h1 className="text-3xl font-bold text-slate-900">
+          {isTestCompleted ? "Test zakończony ✅" : "Sesja ukończona 🎉"}
+        </h1>
+        {isTestCompleted ? (
+          <p className="text-slate-600">
+            Twój wynik: <strong>{testCorrectAnswers}/{testQueue.length}</strong> ({testPercent}%)
+            <br />
+            Talia: <strong>{deck.name}</strong>
+          </p>
+        ) : (
+          <p className="text-slate-600">
+            Przerobiłeś wszystkie karty z talii <strong>{deck.name}</strong>.
+          </p>
+        )}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={() => void restartSession()}
@@ -532,6 +614,7 @@ export default function StudyPage() {
               <button
                 key={m}
                 onClick={() => setMode(m)}
+                disabled={isTestStarted && m === "flashcard"}
                 className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                   mode === m
                     ? "bg-white text-primary shadow-sm"
@@ -545,21 +628,23 @@ export default function StudyPage() {
 
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              <span>Session Progress</span>
-              <span>{progress}%</span>
+              <span>{isTestStarted ? "Test Progress" : "Session Progress"}</span>
+              <span>{isTestStarted ? testStatsText : `${progress}%`}</span>
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
+                animate={{
+                  width: isTestStarted
+                    ? `${((testIndex + 1) / Math.max(testQueue.length, 1)) * 100}%`
+                    : `${progress}%`,
+                }}
                 className="h-full bg-primary"
               />
             </div>
             <div className="mt-2 text-sm font-semibold text-slate-700 flex items-center justify-between">
-              <span>
-                {masteredCardIds.length} / {cardsCount} opanowanych
-              </span>
-              <span className="text-slate-500 text-xs">{queueStatsText}</span>
+              <span>{isTestStarted ? `${testCorrectAnswers} poprawnych odpowiedzi` : `${masteredCardIds.length} / ${cardsCount} opanowanych`}</span>
+              <span className="text-slate-500 text-xs">{isTestStarted ? `${testIndex + 1}/${testQueue.length}` : queueStatsText}</span>
               <span className="text-slate-500 text-xs">Streak: {currentStreak} • Best: {bestStreak}</span>
             </div>
           </div>
@@ -597,6 +682,7 @@ export default function StudyPage() {
 
           <button
             onClick={toggleRandomOrder}
+            disabled={isTestStarted}
             className={`h-10 px-4 rounded-lg border font-semibold inline-flex items-center gap-2 transition-colors ${
               isRandomOrder
                 ? "border-primary bg-primary text-white"
@@ -606,6 +692,29 @@ export default function StudyPage() {
             <Shuffle className="size-4" />
             {isRandomOrder ? "Losowość: ON" : "Losowość: OFF"}
           </button>
+
+          <div className="h-10 px-3 rounded-lg border border-slate-300 bg-white inline-flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Test z</span>
+            <input
+              type="number"
+              min={1}
+              max={cardsCount}
+              value={testQuestionCount}
+              disabled={isTestStarted}
+              onChange={(event) =>
+                setTestQuestionCount(Number(event.target.value) || 1)
+              }
+              className="w-16 text-center border border-slate-200 rounded-md h-7 text-sm"
+            />
+            <span className="text-xs font-semibold text-slate-500">słówek</span>
+            <button
+              onClick={startTest}
+              disabled={isTestStarted}
+              className="h-7 px-3 rounded-md bg-primary text-white text-xs font-bold disabled:opacity-50"
+            >
+              Start testu
+            </button>
+          </div>
 
         </div>
 
@@ -712,7 +821,11 @@ export default function StudyPage() {
                   <FeedbackView
                     isCorrect={isCorrect}
                     solution={solutionText}
-                    onNext={() => applyCardResult(Boolean(isCorrect))}
+                    onNext={() =>
+                      isTestStarted
+                        ? handleTestNext()
+                        : applyCardResult(Boolean(isCorrect))
+                    }
                   />
                 )}
               </div>
