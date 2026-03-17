@@ -88,3 +88,19 @@ export async function editDeck(input: UpdateDeckInput): Promise<void> {
 export async function deleteDeck(id: string): Promise<void> {
   await deleteDeckFromRepo(id);
 }
+
+export async function duplicateDeck(input: {
+  sourceDeck: Deck;
+  suffix?: string;
+}): Promise<string> {
+  const suffix = input.suffix?.trim() || "Copy";
+  const duplicateName = `${input.sourceDeck.name.trim()} (${suffix})`;
+
+  return createDeck({
+    name: duplicateName,
+    cards: input.sourceDeck.cards.map((card) => ({
+      term: card.term,
+      answer: card.answer,
+    })),
+  });
+}

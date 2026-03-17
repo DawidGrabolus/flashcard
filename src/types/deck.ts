@@ -3,4 +3,5 @@ export type Deck = {
   id: string;
   name: string;
   cards: FlashCard[];
+  created_at?: string;
 };
