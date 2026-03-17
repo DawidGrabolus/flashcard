@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bolt,
@@ -11,17 +11,19 @@ import {
   X,
   RotateCcw,
   Home,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Deck } from "../types/deck";
-import { FlashCard } from "../types/flashCard";
 import { getDeckById } from "../features/decks/services/deckServices";
 
-type StudyMode = "flashcard" | "quiz" | "typing";
+type StudyMode = "flashcard" | "typing";
+type StudyDirection = "termToAnswer" | "answerToTerm";
+
+const ROUND_SIZE = 20;
 
 const MODE_LABELS: Record<StudyMode, string> = {
   flashcard: "Flashcards",
-  quiz: "Quiz",
   typing: "Typing",
 };
 
@@ -32,16 +34,23 @@ export default function StudyPage() {
   const [deck, setDeck] = useState<Deck | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [mode, setMode] = useState<StudyMode>("flashcard");
+  const [direction, setDirection] = useState<StudyDirection>("termToAnswer");
   const [answer, setAnswer] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [masteredCardIds, setMasteredCardIds] = useState<string[]>([]);
+  const [roundQueue, setRoundQueue] = useState<number[]>([]);
+  const [remainingQueue, setRemainingQueue] = useState<number[]>([]);
 
-  const currentCard = deck?.cards[currentIndex] ?? null;
+  const currentCardIndex = roundQueue[0] ?? null;
+  const currentCard = currentCardIndex !== null ? deck?.cards[currentCardIndex] ?? null : null;
   const cardsCount = deck?.cards.length ?? 0;
-  const isCompleted = cardsCount > 0 && currentIndex >= cardsCount;
+  const isCompleted = cardsCount > 0 && roundQueue.length === 0 && remainingQueue.length === 0;
+
+  const promptText = direction === "termToAnswer" ? currentCard?.term : currentCard?.answer;
+  const solutionText = direction === "termToAnswer" ? currentCard?.answer : currentCard?.term;
 
   useEffect(() => {
     let isMounted = true;
@@ -92,19 +101,20 @@ export default function StudyPage() {
     };
   }, [deckId]);
 
-  const quizOptions = useMemo(() => {
-    if (!deck || !currentCard) {
-      return [];
+  useEffect(() => {
+    if (!deck || deck.cards.length === 0) {
+      return;
     }
 
-    const incorrectAnswers = deck.cards
-      .filter((card) => card.id !== currentCard.id)
-      .map((card) => card.answer)
-      .filter((value, index, values) => values.indexOf(value) === index)
-      .slice(0, 3);
-
-    return [currentCard.answer, ...incorrectAnswers].sort(() => Math.random() - 0.5);
-  }, [deck, currentCard]);
+    const indexes = deck.cards.map((_, index) => index);
+    setRoundQueue(indexes.slice(0, ROUND_SIZE));
+    setRemainingQueue(indexes.slice(ROUND_SIZE));
+    setMasteredCardIds([]);
+    setAnswer("");
+    setIsSubmitted(false);
+    setIsCorrect(null);
+    setIsFlipped(false);
+  }, [deck]);
 
   const resetCardState = () => {
     setAnswer("");
@@ -113,52 +123,78 @@ export default function StudyPage() {
     setIsFlipped(false);
   };
 
+  const moveToNextRoundIfNeeded = (queue: number[], remaining: number[]) => {
+    if (queue.length > 0 || remaining.length === 0) {
+      return { nextRoundQueue: queue, nextRemainingQueue: remaining };
+    }
+
+    const nextRoundQueue = remaining.slice(0, ROUND_SIZE);
+    const nextRemainingQueue = remaining.slice(ROUND_SIZE);
+
+    return { nextRoundQueue, nextRemainingQueue };
+  };
+
+  const applyCardResult = (known: boolean) => {
+    if (!currentCard || currentCardIndex === null) {
+      return;
+    }
+
+    const restQueue = roundQueue.slice(1);
+    const nextQueue = known ? restQueue : [...restQueue, currentCardIndex];
+
+    if (known) {
+      setMasteredCardIds((prev) =>
+        prev.includes(currentCard.id) ? prev : [...prev, currentCard.id],
+      );
+    }
+
+    const { nextRoundQueue, nextRemainingQueue } = moveToNextRoundIfNeeded(
+      nextQueue,
+      remainingQueue,
+    );
+
+    setRoundQueue(nextRoundQueue);
+    setRemainingQueue(nextRemainingQueue);
+    resetCardState();
+  };
+
   const handleModeChange = (nextMode: StudyMode) => {
     setMode(nextMode);
     resetCardState();
   };
 
+  const handleDirectionToggle = () => {
+    setDirection((prev) =>
+      prev === "termToAnswer" ? "answerToTerm" : "termToAnswer",
+    );
+    resetCardState();
+  };
+
   const handleSubmit = (event?: FormEvent) => {
     event?.preventDefault();
-    if (!currentCard || !answer.trim()) {
+    if (!solutionText || !answer.trim()) {
       return;
     }
 
     const correct =
-      answer.toLowerCase().trim() === currentCard.answer.toLowerCase().trim();
+      answer.toLowerCase().trim() === solutionText.toLowerCase().trim();
     setIsCorrect(correct);
     setIsSubmitted(true);
   };
 
-  const handleQuizSelect = (selected: string) => {
-    if (!currentCard) {
-      return;
-    }
-
-    const correct = selected === currentCard.answer;
-    setIsCorrect(correct);
-    setIsSubmitted(true);
-    setAnswer(selected);
-  };
-
-  const handleNext = () => {
+  const restartSession = () => {
     if (!deck) {
       return;
     }
 
-    resetCardState();
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const restartSession = () => {
-    setCurrentIndex(0);
+    const indexes = deck.cards.map((_, index) => index);
+    setRoundQueue(indexes.slice(0, ROUND_SIZE));
+    setRemainingQueue(indexes.slice(ROUND_SIZE));
+    setMasteredCardIds([]);
     resetCardState();
   };
 
-  const progressBase = isCompleted
-    ? cardsCount
-    : currentIndex + (isSubmitted || isFlipped ? 1 : 0);
-  const progress = cardsCount > 0 ? (progressBase / cardsCount) * 100 : 0;
+  const progress = cardsCount > 0 ? (masteredCardIds.length / cardsCount) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -198,7 +234,7 @@ export default function StudyPage() {
     );
   }
 
-  if (isCompleted || !currentCard) {
+  if (isCompleted || !currentCard || !promptText || !solutionText) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center gap-5 px-4">
         <div className="size-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
@@ -239,7 +275,7 @@ export default function StudyPage() {
         </div>
 
         <div className="hidden md:flex bg-slate-100 p-1 rounded-xl gap-1">
-          {(["flashcard", "quiz", "typing"] as StudyMode[]).map((m) => (
+          {(["flashcard", "typing"] as StudyMode[]).map((m) => (
             <button
               key={m}
               onClick={() => handleModeChange(m)}
@@ -260,7 +296,7 @@ export default function StudyPage() {
               Session Progress
             </span>
             <span className="text-sm font-bold text-primary">
-              {Math.min(currentIndex + 1, cardsCount)} of {cardsCount} cards
+              {masteredCardIds.length} mastered / {cardsCount}
             </span>
           </div>
           <button
@@ -274,15 +310,29 @@ export default function StudyPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center py-8 px-4 max-w-[720px] mx-auto w-full">
-        <div className="w-full mb-12">
+        <div className="w-full mb-6">
           <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
             <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-primary" />
           </div>
+          <div className="mt-3 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <span>Runda: {Math.min(roundQueue.length, ROUND_SIZE)} kart aktywnych</span>
+            <span>Kolejka później: {remainingQueue.length}</span>
+          </div>
+        </div>
+
+        <div className="mb-6 w-full flex justify-center">
+          <button
+            onClick={handleDirectionToggle}
+            className="h-10 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold inline-flex items-center gap-2 hover:border-primary hover:text-primary transition-colors"
+          >
+            <RefreshCw className="size-4" />
+            {direction === "termToAnswer" ? "EN → PL" : "PL → EN"}
+          </button>
         </div>
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${currentIndex}-${mode}`}
+            key={`${currentCard.id}-${mode}-${direction}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -291,98 +341,79 @@ export default function StudyPage() {
             {mode === "flashcard" ? (
               <div className="space-y-8">
                 <motion.div
-                  onClick={() => !isFlipped && setIsFlipped(true)}
+                  onClick={() => setIsFlipped((prev) => !prev)}
                   animate={{ rotateY: isFlipped ? 180 : 0 }}
                   transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
                   className="w-full aspect-[1.6/1] cursor-pointer relative preserve-3d"
                 >
                   <div className={`absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden ${isFlipped ? "hidden" : ""}`}>
                     <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-4">
-                      Question {currentIndex + 1}
+                      {direction === "termToAnswer" ? "Pytanie" : "Tłumaczenie"}
                     </span>
-                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{currentCard.term}</h2>
+                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{promptText}</h2>
                     <div className="mt-8 flex flex-col items-center gap-2 text-slate-400">
                       <Sparkles className="size-8 animate-pulse" />
-                      <p className="text-xs font-bold uppercase tracking-tighter">Tap to reveal answer</p>
+                      <p className="text-xs font-bold uppercase tracking-tighter">Tapnij aby obrócić fiszkę</p>
                     </div>
                   </div>
                   <div className={`absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 ${!isFlipped ? "hidden" : ""}`}>
                     <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full mb-4">
-                      Answer
+                      Odpowiedź
                     </span>
-                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{currentCard.answer}</h2>
+                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{solutionText}</h2>
                   </div>
                 </motion.div>
 
                 {isFlipped && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 gap-4">
-                    <button onClick={handleNext} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-white border-2 border-slate-100 hover:border-rose-400 transition-all shadow-sm">
+                    <button onClick={() => applyCardResult(false)} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-white border-2 border-slate-100 hover:border-rose-400 transition-all shadow-sm">
                       <div className="size-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                         <Frown className="size-6" />
                       </div>
-                      <span className="text-slate-900 font-bold text-lg">Needs Practice</span>
+                      <span className="text-slate-900 font-bold text-lg">Powtórz później</span>
                     </button>
-                    <button onClick={handleNext} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all shadow-xl shadow-primary/25">
+                    <button onClick={() => applyCardResult(true)} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all shadow-xl shadow-primary/25">
                       <div className="size-12 rounded-full bg-white/20 text-white flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                         <Smile className="size-6" />
                       </div>
-                      <span className="font-bold text-lg">I Know This</span>
+                      <span className="font-bold text-lg">Umiem</span>
                     </button>
                   </motion.div>
-                )}
-              </div>
-            ) : mode === "typing" ? (
-              <div className="glass-card rounded-[2rem] p-10 md:p-16 flex flex-col items-center text-center space-y-8 shadow-2xl shadow-primary/5 border border-slate-200">
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">
-                    Typing Mode
-                  </span>
-                  <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{currentCard.term}</h2>
-                </div>
-
-                {!isSubmitted ? (
-                  <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
-                    <div className="flex flex-col items-start gap-2">
-                      <label className="text-sm font-semibold text-slate-500 ml-1">Your Answer</label>
-                      <input
-                        autoFocus
-                        type="text"
-                        value={answer}
-                        onChange={(e) => setAnswer(e.target.value)}
-                        placeholder="Type here..."
-                        className="w-full rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 border-2 border-slate-200 bg-slate-50 h-16 px-5 text-xl font-medium placeholder:text-slate-400 transition-all"
-                      />
-                    </div>
-                    <button type="submit" className="w-full flex items-center justify-center rounded-xl h-14 bg-primary text-white text-lg font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]">
-                      <CheckCircle className="size-5 mr-2" />
-                      Check Answer
-                    </button>
-                  </form>
-                ) : (
-                  <FeedbackView isCorrect={isCorrect} card={currentCard} onNext={handleNext} />
                 )}
               </div>
             ) : (
               <div className="glass-card rounded-[2rem] p-10 md:p-16 flex flex-col items-center text-center space-y-8 shadow-2xl shadow-primary/5 border border-slate-200">
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">Quiz Mode</span>
-                  <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{currentCard.term}</h2>
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">
+                    Typing Mode
+                  </span>
+                  <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{promptText}</h2>
                 </div>
 
                 {!isSubmitted ? (
-                  <div className="w-full grid grid-cols-1 gap-3">
-                    {quizOptions.map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleQuizSelect(option)}
-                        className="h-12 rounded-xl border border-slate-200 hover:border-primary text-slate-700 hover:text-primary font-semibold transition-colors px-4"
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
+                  <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+                    <div className="flex flex-col items-start gap-2">
+                      <label className="text-sm font-semibold text-slate-500 ml-1">Twoja odpowiedź</label>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder="Wpisz odpowiedź..."
+                        className="w-full rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 border-2 border-slate-200 bg-slate-50 h-16 px-5 text-xl font-medium placeholder:text-slate-400 transition-all"
+                      />
+                    </div>
+                    <button type="submit" className="w-full flex items-center justify-center rounded-xl h-14 bg-primary text-white text-lg font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]">
+                      <CheckCircle className="size-5 mr-2" />
+                      Sprawdź
+                    </button>
+                  </form>
                 ) : (
-                  <FeedbackView isCorrect={isCorrect} card={currentCard} onNext={handleNext} />
+                  <FeedbackView
+                    isCorrect={isCorrect}
+                    solution={solutionText}
+                    onNext={() => applyCardResult(Boolean(isCorrect))}
+                  />
                 )}
               </div>
             )}
@@ -391,11 +422,7 @@ export default function StudyPage() {
 
         <div className="mt-12 text-center">
           <p className="text-slate-400 text-sm">
-            {mode === "typing"
-              ? "Press Enter to submit"
-              : mode === "flashcard"
-                ? "Tap card to flip"
-                : "Select an option"}
+            {mode === "typing" ? "Enter = sprawdzenie odpowiedzi" : "Tapnij kartę, aby obracać w obie strony"}
           </p>
         </div>
       </main>
@@ -405,11 +432,11 @@ export default function StudyPage() {
 
 const FeedbackView = ({
   isCorrect,
-  card,
+  solution,
   onNext,
 }: {
   isCorrect: boolean | null;
-  card: FlashCard;
+  solution: string;
   onNext: () => void;
 }) => {
   return (
@@ -425,15 +452,15 @@ const FeedbackView = ({
               <CheckCircle className="size-6" />
             </div>
             <div>
-              <h4 className="text-emerald-900 font-bold text-lg">That's correct!</h4>
-              <p className="text-emerald-700">{card.answer}</p>
+              <h4 className="text-emerald-900 font-bold text-lg">Dobrze!</h4>
+              <p className="text-emerald-700">{solution}</p>
             </div>
           </div>
           <button
             onClick={onNext}
             className="flex items-center justify-center rounded-xl h-12 px-8 bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors w-full md:w-auto"
           >
-            Next Card
+            Następna
             <ArrowRight className="size-5 ml-2" />
           </button>
         </motion.div>
@@ -448,9 +475,9 @@ const FeedbackView = ({
               <XCircle className="size-6" />
             </div>
             <div>
-              <h4 className="text-rose-900 font-bold text-lg">Not quite...</h4>
+              <h4 className="text-rose-900 font-bold text-lg">Jeszcze nie...</h4>
               <p className="text-rose-700">
-                Correct answer: <span className="font-bold underline italic">{card.answer}</span>
+                Poprawna odpowiedź: <span className="font-bold underline italic">{solution}</span>
               </p>
             </div>
           </div>
@@ -458,7 +485,7 @@ const FeedbackView = ({
             onClick={onNext}
             className="flex items-center justify-center rounded-xl h-12 px-8 bg-primary text-white font-bold hover:bg-primary/90 transition-colors w-full md:w-auto"
           >
-            Continue
+            Powtórz później
             <ArrowRight className="size-5 ml-2" />
           </button>
         </motion.div>
