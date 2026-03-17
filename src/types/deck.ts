@@ -4,4 +4,5 @@ export type Deck = {
   name: string;
   cards: FlashCard[];
   created_at?: string;
+  cover_key?: string | null;
 };

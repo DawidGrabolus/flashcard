@@ -2,7 +2,7 @@ import { supabase } from "../../../api/supabaseClient";
 import { FlashCard } from "../../../types/flashCard";
 import { Deck } from "../../../types/deck";
 
-export type NewDeckPayload = Pick<Deck, "name">;
+export type NewDeckPayload = Pick<Deck, "name" | "cover_key">;
 export type NewCardPayload = Pick<FlashCard, "term" | "answer">;
 
 export async function getDecks(): Promise<Deck[]> {
@@ -23,7 +23,7 @@ export async function insertDeck(
 ): Promise<{ id: string }> {
   const { data, error } = await supabase
     .from("flashcard_sets")
-    .insert({ name: input.name })
+    .insert({ name: input.name, cover_key: input.cover_key ?? null })
     .select("id")
     .single();
 
@@ -77,13 +77,25 @@ export async function updateDeckName(
     .from("flashcard_sets")
     .update({ name: newName })
     .eq("id", id);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function deleteCards(id: string): Promise<void> {
   const { error } = await supabase.from("cards").delete().eq("set_id", id);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function deleteDeck(id: string): Promise<void> {
   await deleteCards(id);
   const { error } = await supabase.from("flashcard_sets").delete().eq("id", id);
+
+  if (error) {
+    throw error;
+  }
 }
