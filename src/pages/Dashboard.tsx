@@ -1,10 +1,15 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Deck } from "../types/deck";
 import { DeckCard } from "../features/decks/components/DeckComponent";
 import CreateDeck from "../features/decks/components/CreateNewDeckButtonComponent";
 import { Search } from "lucide-react";
+import {
+  DeckProgressSummary,
+  getOrCreateDeviceSessionId,
+  loadProgressSummaryByDevice,
+} from "../features/study/services/studyProgressService";
 
 type DashboardProps = {
   sets: Deck[];
@@ -16,6 +21,43 @@ export default function Dashboard({ sets }: DashboardProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "name" | "size">("recent");
+  const [progressByDeckId, setProgressByDeckId] = useState<Record<string, DeckProgressSummary>>({});
+
+  useEffect(() => {
+    if (!sets.length) {
+      setProgressByDeckId({});
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadProgress = async () => {
+      try {
+        const deviceSessionId = getOrCreateDeviceSessionId();
+        const cardCounts = sets.reduce<Record<string, number>>((acc, deck) => {
+          acc[deck.id] = deck.cards.length;
+          return acc;
+        }, {});
+        const summary = await loadProgressSummaryByDevice(deviceSessionId, cardCounts);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProgressByDeckId(summary);
+      } catch {
+        if (isMounted) {
+          setProgressByDeckId({});
+        }
+      }
+    };
+
+    void loadProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sets]);
 
   const visibleDecks = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -82,9 +124,18 @@ export default function Dashboard({ sets }: DashboardProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {visibleDecks.map((deck) => (
-            <DeckCard key={deck.id} deck={deck} />
-          ))}
+          {visibleDecks.map((deck) => {
+            const progress = progressByDeckId[deck.id];
+
+            return (
+              <DeckCard
+                key={deck.id}
+                deck={deck}
+                progressPercent={progress?.progressPercent ?? 0}
+                masteredCards={progress?.masteredCards ?? 0}
+              />
+            );
+          })}
 
           <CreateDeck onClick={() => navigate("/create-deck")} />
         </div>

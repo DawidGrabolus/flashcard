@@ -3,7 +3,17 @@ import { useNavigate } from "react-router-dom";
 import cover from "../../../assets/cover1.png";
 import { Deck } from "../../../types/deck";
 
-export const DeckCard = ({ deck }: { deck: Deck }) => {
+type DeckCardProps = {
+  deck: Deck;
+  progressPercent?: number;
+  masteredCards?: number;
+};
+
+export const DeckCard = ({
+  deck,
+  progressPercent = 0,
+  masteredCards = 0,
+}: DeckCardProps) => {
   const navigate = useNavigate();
 
   const freshnessLabel = deck.created_at
@@ -28,9 +38,21 @@ export const DeckCard = ({ deck }: { deck: Deck }) => {
         <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
           {deck.name}
         </h3>
-        <p className="text-slate-500 text-sm line-clamp-2 mb-6">
+        <p className="text-slate-500 text-sm line-clamp-2 mb-4">
           {deck.cards.length} flashcards ready for your next session.
         </p>
+        <div className="space-y-1.5 mb-6">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Postęp</span>
+            <span>{masteredCards}/{deck.cards.length} • {progressPercent}%</span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-50 gap-2">

@@ -7,6 +7,8 @@ type DeckCardProps = {
   onDelete: (id: string) => void;
   onDuplicate: (deck: Deck) => void;
   onExport: (deck: Deck) => void;
+  progressPercent?: number;
+  masteredCards?: number;
 };
 
 export const EditedDeckCard = ({
@@ -14,6 +16,8 @@ export const EditedDeckCard = ({
   onDelete,
   onDuplicate,
   onExport,
+  progressPercent = 0,
+  masteredCards = 0,
 }: DeckCardProps) => {
   const navigate = useNavigate();
 
@@ -65,6 +69,16 @@ export const EditedDeckCard = ({
       <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
         {deck.name}
       </h3>
+
+      <div className="mb-5 space-y-1.5">
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+          <span>Postęp</span>
+          <span>{masteredCards}/{deck.cards.length} • {progressPercent}%</span>
+        </div>
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </div>
 
       <div className="flex items-center justify-between pt-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
