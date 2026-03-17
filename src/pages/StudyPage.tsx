@@ -45,12 +45,16 @@ export default function StudyPage() {
   const [remainingQueue, setRemainingQueue] = useState<number[]>([]);
 
   const currentCardIndex = roundQueue[0] ?? null;
-  const currentCard = currentCardIndex !== null ? deck?.cards[currentCardIndex] ?? null : null;
+  const currentCard =
+    currentCardIndex !== null ? (deck?.cards[currentCardIndex] ?? null) : null;
   const cardsCount = deck?.cards.length ?? 0;
-  const isCompleted = cardsCount > 0 && roundQueue.length === 0 && remainingQueue.length === 0;
+  const isCompleted =
+    cardsCount > 0 && roundQueue.length === 0 && remainingQueue.length === 0;
 
-  const promptText = direction === "termToAnswer" ? currentCard?.term : currentCard?.answer;
-  const solutionText = direction === "termToAnswer" ? currentCard?.answer : currentCard?.term;
+  const promptText =
+    direction === "termToAnswer" ? currentCard?.term : currentCard?.answer;
+  const solutionText =
+    direction === "termToAnswer" ? currentCard?.answer : currentCard?.term;
 
   useEffect(() => {
     let isMounted = true;
@@ -194,7 +198,8 @@ export default function StudyPage() {
     resetCardState();
   };
 
-  const progress = cardsCount > 0 ? (masteredCardIds.length / cardsCount) * 100 : 0;
+  const progress =
+    cardsCount > 0 ? (masteredCardIds.length / cardsCount) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -236,11 +241,13 @@ export default function StudyPage() {
 
   if (isCompleted || !currentCard || !promptText || !solutionText) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center gap-5 px-4">
+      <motion.div>
         <div className="size-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
           <CheckCircle className="size-8" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900">Sesja ukończona 🎉</h1>
+        <h1 className="text-3xl font-bold text-slate-900">
+          Sesja ukończona 🎉
+        </h1>
         <p className="text-slate-600">
           Przerobiłeś wszystkie karty z talii <strong>{deck.name}</strong>.
         </p>
@@ -260,62 +267,58 @@ export default function StudyPage() {
             Strona główna
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background-light flex flex-col">
-      <header className="flex items-center justify-between px-6 md:px-20 lg:px-40 py-4 bg-white border-b border-primary/10 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-primary text-white flex items-center justify-center">
-            <Bolt className="size-6" />
-          </div>
-          <h2 className="text-slate-900 text-xl font-bold tracking-tight">FlashLearn</h2>
-        </div>
-
-        <div className="hidden md:flex bg-slate-100 p-1 rounded-xl gap-1">
-          {(["flashcard", "typing"] as StudyMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => handleModeChange(m)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                mode === m
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex flex-col items-end mr-4">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Session Progress
-            </span>
-            <span className="text-sm font-bold text-primary">
-              {masteredCardIds.length} mastered / {cardsCount}
-            </span>
-          </div>
+    <motion.div>
+      {" "}
+      <div className="hidden md:flex bg-slate-100 p-1 rounded-xl gap-1">
+        {(["flashcard", "typing"] as StudyMode[]).map((m) => (
           <button
-            onClick={() => navigate("/library")}
-            className="size-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors"
-            aria-label="Close study session"
+            key={m}
+            onClick={() => handleModeChange(m)}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              mode === m
+                ? "bg-white text-primary shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
           >
-            <X className="size-5" />
+            {MODE_LABELS[m]}
           </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="hidden md:flex flex-col items-end mr-4">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Session Progress
+          </span>
+          <span className="text-sm font-bold text-primary">
+            {masteredCardIds.length} mastered / {cardsCount}
+          </span>
         </div>
-      </header>
-
+        <button
+          onClick={() => navigate("/library")}
+          className="size-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors"
+          aria-label="Close study session"
+        >
+          <X className="size-5" />
+        </button>
+      </div>
       <main className="flex-1 flex flex-col items-center justify-center py-8 px-4 max-w-[720px] mx-auto w-full">
         <div className="w-full mb-6">
           <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-primary" />
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="h-full bg-primary"
+            />
           </div>
           <div className="mt-3 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            <span>Runda: {Math.min(roundQueue.length, ROUND_SIZE)} kart aktywnych</span>
+            <span>
+              Runda: {Math.min(roundQueue.length, ROUND_SIZE)} kart aktywnych
+            </span>
             <span>Kolejka później: {remainingQueue.length}</span>
           </div>
         </div>
@@ -343,36 +346,59 @@ export default function StudyPage() {
                 <motion.div
                   onClick={() => setIsFlipped((prev) => !prev)}
                   animate={{ rotateY: isFlipped ? 180 : 0 }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+                  transition={{
+                    duration: 0.6,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
                   className="w-full aspect-[1.6/1] cursor-pointer relative preserve-3d"
                 >
-                  <div className={`absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden ${isFlipped ? "hidden" : ""}`}>
+                  <div className="absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden">
                     <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full mb-4">
                       {direction === "termToAnswer" ? "Pytanie" : "Tłumaczenie"}
                     </span>
-                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{promptText}</h2>
+                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">
+                      {promptText}
+                    </h2>
                     <div className="mt-8 flex flex-col items-center gap-2 text-slate-400">
                       <Sparkles className="size-8 animate-pulse" />
-                      <p className="text-xs font-bold uppercase tracking-tighter">Tapnij aby obrócić fiszkę</p>
+                      <p className="text-xs font-bold uppercase tracking-tighter">
+                        Tapnij aby obrócić fiszkę
+                      </p>
                     </div>
                   </div>
-                  <div className={`absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 ${!isFlipped ? "hidden" : ""}`}>
+                  <div className="absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180">
                     <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full mb-4">
                       Odpowiedź
                     </span>
-                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{solutionText}</h2>
+                    <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">
+                      {solutionText}
+                    </h2>
                   </div>
                 </motion.div>
 
                 {isFlipped && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 gap-4">
-                    <button onClick={() => applyCardResult(false)} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-white border-2 border-slate-100 hover:border-rose-400 transition-all shadow-sm">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <button
+                      onClick={() => applyCardResult(false)}
+                      className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-white border-2 border-slate-100 hover:border-rose-400 transition-all shadow-sm"
+                    >
                       <div className="size-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                         <Frown className="size-6" />
                       </div>
-                      <span className="text-slate-900 font-bold text-lg">Powtórz później</span>
+                      <span className="text-slate-900 font-bold text-lg">
+                        Powtórz później
+                      </span>
                     </button>
-                    <button onClick={() => applyCardResult(true)} className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all shadow-xl shadow-primary/25">
+                    <button
+                      onClick={() => applyCardResult(true)}
+                      className="group flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-primary text-white hover:bg-primary/90 transition-all shadow-xl shadow-primary/25"
+                    >
                       <div className="size-12 rounded-full bg-white/20 text-white flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                         <Smile className="size-6" />
                       </div>
@@ -387,13 +413,20 @@ export default function StudyPage() {
                   <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">
                     Typing Mode
                   </span>
-                  <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">{promptText}</h2>
+                  <h2 className="text-slate-900 text-3xl font-extrabold leading-tight">
+                    {promptText}
+                  </h2>
                 </div>
 
                 {!isSubmitted ? (
-                  <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="w-full max-w-md space-y-6"
+                  >
                     <div className="flex flex-col items-start gap-2">
-                      <label className="text-sm font-semibold text-slate-500 ml-1">Twoja odpowiedź</label>
+                      <label className="text-sm font-semibold text-slate-500 ml-1">
+                        Twoja odpowiedź
+                      </label>
                       <input
                         autoFocus
                         type="text"
@@ -403,7 +436,10 @@ export default function StudyPage() {
                         className="w-full rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 border-2 border-slate-200 bg-slate-50 h-16 px-5 text-xl font-medium placeholder:text-slate-400 transition-all"
                       />
                     </div>
-                    <button type="submit" className="w-full flex items-center justify-center rounded-xl h-14 bg-primary text-white text-lg font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]">
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center rounded-xl h-14 bg-primary text-white text-lg font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]"
+                    >
                       <CheckCircle className="size-5 mr-2" />
                       Sprawdź
                     </button>
@@ -422,11 +458,13 @@ export default function StudyPage() {
 
         <div className="mt-12 text-center">
           <p className="text-slate-400 text-sm">
-            {mode === "typing" ? "Enter = sprawdzenie odpowiedzi" : "Tapnij kartę, aby obracać w obie strony"}
+            {mode === "typing"
+              ? "Enter = sprawdzenie odpowiedzi"
+              : "Tapnij kartę, aby obracać w obie strony"}
           </p>
         </div>
       </main>
-    </div>
+    </motion.div>
   );
 }
 
@@ -475,9 +513,12 @@ const FeedbackView = ({
               <XCircle className="size-6" />
             </div>
             <div>
-              <h4 className="text-rose-900 font-bold text-lg">Jeszcze nie...</h4>
+              <h4 className="text-rose-900 font-bold text-lg">
+                Jeszcze nie...
+              </h4>
               <p className="text-rose-700">
-                Poprawna odpowiedź: <span className="font-bold underline italic">{solution}</span>
+                Poprawna odpowiedź:{" "}
+                <span className="font-bold underline italic">{solution}</span>
               </p>
             </div>
           </div>
