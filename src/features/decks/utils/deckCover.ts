@@ -5,7 +5,14 @@ import cover4 from "../../../assets/cover4.png";
 import cover5 from "../../../assets/cover5.png";
 import cover6 from "../../../assets/cover6.png";
 
-export const COVER_KEYS = ["cover1", "cover2", "cover3", "cover4", "cover5", "cover6"] as const;
+export const COVER_KEYS = [
+  "cover1",
+  "cover2",
+  "cover3",
+  "cover4",
+  "cover5",
+  "cover6",
+] as const;
 
 export type CoverKey = (typeof COVER_KEYS)[number];
 
@@ -32,7 +39,10 @@ const hashString = (value: string): number => {
   return Math.abs(hash);
 };
 
-export const getCoverByKey = (coverKey?: string | null, deckId?: string): string => {
+export const getCoverByKey = (
+  coverKey?: string | null,
+  deckId?: string,
+): string => {
   if (coverKey && coverKey in COVER_MAP) {
     return COVER_MAP[coverKey as CoverKey];
   }

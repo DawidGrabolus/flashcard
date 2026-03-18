@@ -1,4 +1,12 @@
-import { ArrowRight, BookOpen, Copy, Download, Edit3, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Copy,
+  Download,
+  Edit3,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { Deck } from "../../../types/deck";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +16,7 @@ type DeckCardProps = {
   onDuplicate: (deck: Deck) => void;
   onExport: (deck: Deck) => void;
   progressPercent?: number;
+  onResetProgress: (deck: Deck) => void;
   masteredCards?: number;
 };
 
@@ -16,10 +25,12 @@ export const EditedDeckCard = ({
   onDelete,
   onDuplicate,
   onExport,
+  onResetProgress,
   progressPercent = 0,
   masteredCards = 0,
 }: DeckCardProps) => {
   const navigate = useNavigate();
+  const hasProgress = progressPercent > 0 || masteredCards > 0;
 
   return (
     <div className="group relative bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all">
@@ -29,8 +40,12 @@ export const EditedDeckCard = ({
             <BookOpen size={24} />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-slate-400">Deck</p>
-            <p className="text-sm font-semibold text-slate-700">{deck.cards.length} cards</p>
+            <p className="text-xs uppercase tracking-wider text-slate-400">
+              Deck
+            </p>
+            <p className="text-sm font-semibold text-slate-700">
+              {deck.cards.length} cards
+            </p>
           </div>
         </div>
 
@@ -57,6 +72,14 @@ export const EditedDeckCard = ({
             <Download size={18} />
           </button>
           <button
+            onClick={() => onResetProgress(deck)}
+            disabled={!hasProgress}
+            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-slate-400 disabled:hover:bg-transparent"
+            title={hasProgress ? "Reset progress" : "No saved progress"}
+          >
+            <RotateCcw size={18} />
+          </button>
+          <button
             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
             onClick={() => onDelete(deck.id)}
             title="Delete deck"
@@ -73,10 +96,15 @@ export const EditedDeckCard = ({
       <div className="mb-5 space-y-1.5">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
           <span>Postęp</span>
-          <span>{masteredCards}/{deck.cards.length} • {progressPercent}%</span>
+          <span>
+            {masteredCards}/{deck.cards.length} • {progressPercent}%
+          </span>
         </div>
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
 

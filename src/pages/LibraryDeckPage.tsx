@@ -2,7 +2,10 @@ import { Brain, Plus, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { Deck } from "../types/deck";
 import { EditedDeckCard } from "../features/decks/components/LibraryDeckComponent";
-import { deleteDeck, duplicateDeck } from "../features/decks/services/deckServices";
+import {
+  deleteDeck,
+  duplicateDeck,
+} from "../features/decks/services/deckServices";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { downloadDeckCsv } from "../features/decks/utils/deckExport";
@@ -10,6 +13,7 @@ import {
   DeckProgressSummary,
   getOrCreateDeviceSessionId,
   loadProgressSummaryByDevice,
+  resetStudyProgress,
 } from "../features/study/services/studyProgressService";
 
 type LibraryViewProps = {
@@ -23,7 +27,9 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortType>("name-asc");
   const [minCards, setMinCards] = useState<number>(0);
-  const [progressByDeckId, setProgressByDeckId] = useState<Record<string, DeckProgressSummary>>({});
+  const [progressByDeckId, setProgressByDeckId] = useState<
+    Record<string, DeckProgressSummary>
+  >({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,7 +47,10 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
           acc[deck.id] = deck.cards.length;
           return acc;
         }, {});
-        const summary = await loadProgressSummaryByDevice(deviceSessionId, cardCounts);
+        const summary = await loadProgressSummaryByDevice(
+          deviceSessionId,
+          cardCounts,
+        );
 
         if (!isMounted) {
           return;
@@ -61,6 +70,20 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
       isMounted = false;
     };
   }, [decks]);
+  const resetDeckProgressHandler = async (deck: Deck) => {
+    const accepted = window.confirm(
+      `Zresetować postęp dla talii "${deck.name}" na tym urządzeniu?`,
+    );
+    if (!accepted) return;
+
+    const deviceSessionId = getOrCreateDeviceSessionId();
+    await resetStudyProgress(deck.id, deviceSessionId);
+    setProgressByDeckId((current) => {
+      const next = { ...current };
+      delete next[deck.id];
+      return next;
+    });
+  };
 
   const filteredDecks = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -97,7 +120,10 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
     await onDeckSaved();
   };
 
-  const totalCards = filteredDecks.reduce((sum, deck) => sum + deck.cards.length, 0);
+  const totalCards = filteredDecks.reduce(
+    (sum, deck) => sum + deck.cards.length,
+    0,
+  );
 
   return (
     <motion.div
@@ -108,8 +134,12 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">My Deck Library</h2>
-          <p className="text-slate-500 max-w-md">{filteredDecks.length} decks • {totalCards} cards in current view.</p>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">
+            My Deck Library
+          </h2>
+          <p className="text-slate-500 max-w-md">
+            {filteredDecks.length} decks • {totalCards} cards in current view.
+          </p>
         </div>
         <button
           onClick={() => navigate("/create-deck")}
@@ -122,7 +152,10 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-6 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            size={20}
+          />
           <input
             type="text"
             value={search}
@@ -172,6 +205,7 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
               <EditedDeckCard
                 key={deck.id}
                 deck={deck}
+                onResetProgress={resetDeckProgressHandler}
                 onDelete={deleteDeckHandler}
                 onDuplicate={duplicateDeckHandler}
                 onExport={downloadDeckCsv}
@@ -185,8 +219,12 @@ export default function LibraryView({ decks, onDeckSaved }: LibraryViewProps) {
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
               <Brain size={32} />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Generate with AI</h3>
-            <p className="text-slate-500 text-sm max-w-[200px]">Upload a PDF or paste notes to generate cards instantly.</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              Generate with AI
+            </h3>
+            <p className="text-slate-500 text-sm max-w-[200px]">
+              Upload a PDF or paste notes to generate cards instantly.
+            </p>
             <div className="mt-6">
               <button className="px-6 py-2 bg-primary text-white text-xs font-bold rounded-xl shadow-lg shadow-primary/20">
                 Try FlashAI
