@@ -75,6 +75,12 @@ export const DeckCard = ({
           >
             Study
           </button>
+          <button
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all"
+            onClick={() => navigate(`/decks/${deck.id}/test`)}
+          >
+            Test
+          </button>
         </div>
       </div>
     </div>

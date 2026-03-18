@@ -19,6 +19,7 @@ export type CreateDeckInput = NewDeckPayload & {
 export type UpdateDeckInput = {
   deckId: string;
   name: string;
+  cover_key?: string | null;
   cards: NewCardPayload[];
 };
 
@@ -82,7 +83,11 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 }
 
 export async function editDeck(input: UpdateDeckInput): Promise<void> {
-  await updateDeckNameFromRepo(input.deckId, input.name.trim());
+  await updateDeckNameFromRepo(
+    input.deckId,
+    input.name.trim(),
+    input.cover_key,
+  );
   await deleteCardsFromRepo(input.deckId);
   await insertCardsFromRepo(input.deckId, input.cards);
 }

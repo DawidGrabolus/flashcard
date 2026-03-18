@@ -693,28 +693,12 @@ export default function StudyPage() {
             {isRandomOrder ? "Losowość: ON" : "Losowość: OFF"}
           </button>
 
-          <div className="h-10 px-3 rounded-lg border border-slate-300 bg-white inline-flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Test z</span>
-            <input
-              type="number"
-              min={1}
-              max={cardsCount}
-              value={testQuestionCount}
-              disabled={isTestStarted}
-              onChange={(event) =>
-                setTestQuestionCount(Number(event.target.value) || 1)
-              }
-              className="w-16 text-center border border-slate-200 rounded-md h-7 text-sm"
-            />
-            <span className="text-xs font-semibold text-slate-500">słówek</span>
-            <button
-              onClick={startTest}
-              disabled={isTestStarted}
-              className="h-7 px-3 rounded-md bg-primary text-white text-xs font-bold disabled:opacity-50"
-            >
-              Start testu
-            </button>
-          </div>
+          <button
+            onClick={() => navigate(`/decks/${deck.id}/test`)}
+            className="h-10 px-4 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold inline-flex items-center gap-2 hover:bg-indigo-100 transition-colors"
+          >
+            Przejdź do testu
+          </button>
 
         </div>
 

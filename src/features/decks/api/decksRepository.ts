@@ -72,10 +72,17 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 export async function updateDeckName(
   id: string,
   newName: string,
+  coverKey?: string | null,
 ): Promise<void> {
+  const payload: { name: string; cover_key?: string | null } = { name: newName };
+
+  if (coverKey !== undefined) {
+    payload.cover_key = coverKey;
+  }
+
   const { error } = await supabase
     .from("flashcard_sets")
-    .update({ name: newName })
+    .update(payload)
     .eq("id", id);
 
   if (error) {
