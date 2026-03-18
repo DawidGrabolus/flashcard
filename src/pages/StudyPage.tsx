@@ -607,6 +607,13 @@ export default function StudyPage() {
             {isRandomOrder ? "Losowość: ON" : "Losowość: OFF"}
           </button>
 
+          <button
+            onClick={() => navigate(`/decks/${deck.id}/test`)}
+            className="h-10 px-4 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold inline-flex items-center gap-2 hover:bg-indigo-100 transition-colors"
+          >
+            Przejdź do testu
+          </button>
+
         </div>
 
         <AnimatePresence mode="wait">

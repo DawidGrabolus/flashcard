@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "./components/Navbar";
 import LibraryDeckPage from "./pages/LibraryDeckPage";
 import StudyPage from "./pages/StudyPage";
+import DeckTestPage from "./pages/DeckTestPage";
 
 type PageTransitionProps = {
   children: React.ReactNode;
@@ -93,6 +94,14 @@ function AppRoutes({
             element={
               <PageTransition>
                 <StudyPage />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/decks/:deckId/test"
+            element={
+              <PageTransition>
+                <DeckTestPage />
               </PageTransition>
             }
           />

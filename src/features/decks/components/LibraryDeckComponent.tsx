@@ -80,17 +80,25 @@ export const EditedDeckCard = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-2 gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Ready to learn
         </span>
-        <button
-          className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-          onClick={() => navigate(`/decks/${deck.id}/study`)}
-        >
-          Open Deck
-          <ArrowRight size={14} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="text-sm font-bold text-indigo-600 hover:underline"
+            onClick={() => navigate(`/decks/${deck.id}/test`)}
+          >
+            Test
+          </button>
+          <button
+            className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
+            onClick={() => navigate(`/decks/${deck.id}/study`)}
+          >
+            Open Deck
+            <ArrowRight size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

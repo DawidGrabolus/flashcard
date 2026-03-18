@@ -11,6 +11,7 @@ import {
   NewCardPayload,
   NewDeckPayload,
 } from "../api/decksRepository";
+import { getRandomCoverKey } from "../utils/deckCover";
 
 export type CreateDeckInput = NewDeckPayload & {
   cards: NewCardPayload[];
@@ -18,6 +19,7 @@ export type CreateDeckInput = NewDeckPayload & {
 export type UpdateDeckInput = {
   deckId: string;
   name: string;
+  cover_key?: string | null;
   cards: NewCardPayload[];
 };
 
@@ -40,6 +42,7 @@ export async function createDeck(input: CreateDeckInput): Promise<string> {
 
   const createdDeck = await insertDeckFromRepo({
     name: sanitizedName,
+    cover_key: input.cover_key ?? getRandomCoverKey(),
   });
 
   try {
@@ -80,7 +83,11 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 }
 
 export async function editDeck(input: UpdateDeckInput): Promise<void> {
-  await updateDeckNameFromRepo(input.deckId, input.name.trim());
+  await updateDeckNameFromRepo(
+    input.deckId,
+    input.name.trim(),
+    input.cover_key,
+  );
   await deleteCardsFromRepo(input.deckId);
   await insertCardsFromRepo(input.deckId, input.cards);
 }
@@ -98,6 +105,7 @@ export async function duplicateDeck(input: {
 
   return createDeck({
     name: duplicateName,
+    cover_key: getRandomCoverKey(),
     cards: input.sourceDeck.cards.map((card) => ({
       term: card.term,
       answer: card.answer,

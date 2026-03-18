@@ -14,6 +14,7 @@ import { FlashCard } from "../types/flashCard";
 import DeckCardList from "../components/DeckCardList";
 import { getDeckById } from "../features/decks/services/deckServices";
 import { parseFlashCardsFile } from "../features/decks/utils/flashcardImport";
+import { COVER_KEYS, CoverKey, getCoverByKey } from "../features/decks/utils/deckCover";
 
 type EditDeckPageProps = {
   onDeckSaved: () => Promise<void>;
@@ -25,6 +26,7 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
   const [name, setName] = useState("");
   const navigate = useNavigate();
   const [flashCards, setflashCards] = useState<FlashCard[]>([]);
+  const [coverKey, setCoverKey] = useState<CoverKey>("cover1");
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -43,6 +45,10 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
 
       setName(deck.name);
       setflashCards(deck.cards ?? []);
+      const initialCover = COVER_KEYS.includes(deck.cover_key as CoverKey)
+        ? (deck.cover_key as CoverKey)
+        : "cover1";
+      setCoverKey(initialCover);
       setIsLoading(false);
     }
 
@@ -92,6 +98,7 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
     await editDeck({
       deckId: deckId!,
       name,
+      cover_key: coverKey,
       cards: flashCards.map((card) => ({
         term: card.term,
         answer: card.answer,
@@ -187,6 +194,31 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
                     <option>Science</option>
                     <option>Languages</option>
                   </select>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Cover
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {COVER_KEYS.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCoverKey(key)}
+                        className={`overflow-hidden rounded-lg border-2 transition-all ${
+                          coverKey === key
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-transparent hover:border-slate-200"
+                        }`}
+                      >
+                        <img
+                          src={getCoverByKey(key)}
+                          alt={`Cover ${key}`}
+                          className="h-16 w-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="pt-2">
                   <label className="inline-flex items-center cursor-pointer">
@@ -284,7 +316,6 @@ export default function EditDeckPage({ onDeckSaved }: EditDeckPageProps) {
           </div>
         </div>
       </motion.div>
-      ;
     </main>
   );
 }
