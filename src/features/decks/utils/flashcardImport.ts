@@ -55,7 +55,13 @@ const detectSeparator = (line: string): string => {
 const hasHeader = (firstRow: string[]): boolean => {
   const normalized = firstRow.map((cell) => cell.toLowerCase().trim());
   const termNames = ["term", "question", "front", "hasło", "pojęcie"];
-  const answerNames = ["answer", "definition", "back", "odpowiedź", "definicja"];
+  const answerNames = [
+    "answer",
+    "definition",
+    "back",
+    "odpowiedź",
+    "definicja",
+  ];
 
   const hasTerm = termNames.some((name) => normalized[0]?.includes(name));
   const hasAnswer = answerNames.some((name) => normalized[1]?.includes(name));
@@ -82,7 +88,7 @@ export const parseFlashCardsFile = async (
     throw new Error("Plik jest pusty.");
   }
 
-  const separator = detectSeparator(lines[0]);
+  const separator = ";";
   const rows = lines.map((line) => splitCsvLine(line, separator));
   const rowsWithoutHeader = hasHeader(rows[0]) ? rows.slice(1) : rows;
 
