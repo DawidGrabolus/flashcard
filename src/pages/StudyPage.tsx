@@ -84,7 +84,6 @@ const insertAtRandomPosition = (queue: number[], value: number): number[] => {
   return result;
 };
 
-
 const isAnswerCorrect = (answer: string, solution: string): boolean => {
   const normalizedAnswer = normalize(answer);
   const normalizedSolution = normalize(solution);
@@ -97,7 +96,7 @@ const isAnswerCorrect = (answer: string, solution: string): boolean => {
     return false;
   }
 
-  return levenshteinDistance(normalizedAnswer, normalizedSolution) <= 1;
+  return normalizedAnswer === normalizedSolution;
 };
 
 export default function StudyPage() {
@@ -144,7 +143,9 @@ export default function StudyPage() {
     direction === "termToAnswer" ? currentCard?.answer : currentCard?.term;
 
   const progress =
-    cardsCount > 0 ? Math.round((masteredCardIds.length / cardsCount) * 100) : 0;
+    cardsCount > 0
+      ? Math.round((masteredCardIds.length / cardsCount) * 100)
+      : 0;
 
   const queueStatsText = useMemo(
     () => `${roundQueue.length} aktywnych • ${remainingQueue.length} później`,
@@ -343,7 +344,6 @@ export default function StudyPage() {
           applyCardResult(true);
         }
       }
-
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -367,7 +367,9 @@ export default function StudyPage() {
     const nextRemainingQueue = remaining.slice(ROUND_SIZE);
 
     return {
-      nextRoundQueue: isRandomOrder ? shuffleArray(nextRoundQueue) : nextRoundQueue,
+      nextRoundQueue: isRandomOrder
+        ? shuffleArray(nextRoundQueue)
+        : nextRoundQueue,
       nextRemainingQueue: isRandomOrder
         ? shuffleArray(nextRemainingQueue)
         : nextRemainingQueue,
@@ -413,31 +415,14 @@ export default function StudyPage() {
     resetCardState();
   };
 
-  const startTest = () => {
-    if (!deck || !deck.cards.length) {
-      return;
-    }
-
-    const safeCount = Math.min(Math.max(testQuestionCount, 1), deck.cards.length);
-    const indexes = deck.cards.map((_, index) => index);
-    const randomSample = shuffleArray(indexes).slice(0, safeCount);
-
-    setTestQueue(randomSample);
-    setTestIndex(0);
-    setTestCorrectAnswers(0);
-    setIsTestCompleted(false);
-    setIsTestStarted(true);
-    setMode("typing");
-    setDirection("termToAnswer");
-    resetCardState();
-  };
-
   const handleTestNext = () => {
     if (!isTestStarted) {
       return;
     }
 
-    const nextCorrectAnswers = isCorrect ? testCorrectAnswers + 1 : testCorrectAnswers;
+    const nextCorrectAnswers = isCorrect
+      ? testCorrectAnswers + 1
+      : testCorrectAnswers;
     const isLastQuestion = testIndex >= testQueue.length - 1;
 
     if (isLastQuestion) {
@@ -452,7 +437,6 @@ export default function StudyPage() {
     setTestIndex((prev) => prev + 1);
     resetCardState();
   };
-
 
   const handleSubmit = (event?: FormEvent) => {
     event?.preventDefault();
@@ -474,7 +458,10 @@ export default function StudyPage() {
     }
 
     const [current, ...rest] = roundQueue;
-    const shuffledRound = current === undefined ? shuffleArray(rest) : [current, ...shuffleArray(rest)];
+    const shuffledRound =
+      current === undefined
+        ? shuffleArray(rest)
+        : [current, ...shuffleArray(rest)];
 
     setRoundQueue(shuffledRound);
     setRemainingQueue(shuffleArray(remainingQueue));
@@ -548,7 +535,13 @@ export default function StudyPage() {
     );
   }
 
-  if (isTestCompleted || isCompleted || !currentCard || !promptText || !solutionText) {
+  if (
+    isTestCompleted ||
+    isCompleted ||
+    !currentCard ||
+    !promptText ||
+    !solutionText
+  ) {
     const testPercent = testQueue.length
       ? Math.round((testCorrectAnswers / testQueue.length) * 100)
       : 0;
@@ -563,7 +556,11 @@ export default function StudyPage() {
         </h1>
         {isTestCompleted ? (
           <p className="text-slate-600">
-            Twój wynik: <strong>{testCorrectAnswers}/{testQueue.length}</strong> ({testPercent}%)
+            Twój wynik:{" "}
+            <strong>
+              {testCorrectAnswers}/{testQueue.length}
+            </strong>{" "}
+            ({testPercent}%)
             <br />
             Talia: <strong>{deck.name}</strong>
           </p>
@@ -587,7 +584,6 @@ export default function StudyPage() {
             <Home className="size-4" />
             Strona główna
           </button>
-
         </div>
       </motion.div>
     );
@@ -597,7 +593,9 @@ export default function StudyPage() {
     <motion.div className="max-w-5xl mx-auto w-full space-y-6">
       <header className="glass-card rounded-2xl px-4 py-4 md:px-6 md:py-5 border border-slate-200 flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-lg md:text-xl font-bold text-slate-900">{deck.name}</h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-900">
+            {deck.name}
+          </h1>
           <button
             onClick={() => navigate("/library")}
             className="size-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors"
@@ -605,7 +603,6 @@ export default function StudyPage() {
           >
             <X className="size-5" />
           </button>
-
         </div>
 
         <div className="grid md:grid-cols-[auto_1fr_auto] gap-3 items-center">
@@ -628,7 +625,9 @@ export default function StudyPage() {
 
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              <span>{isTestStarted ? "Test Progress" : "Session Progress"}</span>
+              <span>
+                {isTestStarted ? "Test Progress" : "Session Progress"}
+              </span>
               <span>{isTestStarted ? testStatsText : `${progress}%`}</span>
             </div>
             <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -643,9 +642,19 @@ export default function StudyPage() {
               />
             </div>
             <div className="mt-2 text-sm font-semibold text-slate-700 flex items-center justify-between">
-              <span>{isTestStarted ? `${testCorrectAnswers} poprawnych odpowiedzi` : `${masteredCardIds.length} / ${cardsCount} opanowanych`}</span>
-              <span className="text-slate-500 text-xs">{isTestStarted ? `${testIndex + 1}/${testQueue.length}` : queueStatsText}</span>
-              <span className="text-slate-500 text-xs">Streak: {currentStreak} • Best: {bestStreak}</span>
+              <span>
+                {isTestStarted
+                  ? `${testCorrectAnswers} poprawnych odpowiedzi`
+                  : `${masteredCardIds.length} / ${cardsCount} opanowanych`}
+              </span>
+              <span className="text-slate-500 text-xs">
+                {isTestStarted
+                  ? `${testIndex + 1}/${testQueue.length}`
+                  : queueStatsText}
+              </span>
+              <span className="text-slate-500 text-xs">
+                Streak: {currentStreak} • Best: {bestStreak}
+              </span>
             </div>
           </div>
 
@@ -658,7 +667,9 @@ export default function StudyPage() {
             ) : (
               <>
                 <CloudCheck className="size-4 text-emerald-500" />
-                <span>{saveStatus === "saving" ? "Zapisywanie..." : "Zapisano"}</span>
+                <span>
+                  {saveStatus === "saving" ? "Zapisywanie..." : "Zapisano"}
+                </span>
               </>
             )}
           </div>
@@ -666,7 +677,6 @@ export default function StudyPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center py-6 px-2 max-w-[760px] mx-auto w-full">
-
         <div className="mb-6 w-full flex justify-center gap-3 flex-wrap">
           <button
             onClick={() =>
@@ -699,7 +709,6 @@ export default function StudyPage() {
           >
             Przejdź do testu
           </button>
-
         </div>
 
         <AnimatePresence mode="wait">
@@ -715,7 +724,12 @@ export default function StudyPage() {
                 <motion.div
                   onClick={() => setIsFlipped((prev) => !prev)}
                   animate={{ rotateY: isFlipped ? 180 : 0 }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+                  transition={{
+                    duration: 0.6,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
                   className="w-full aspect-[1.6/1] cursor-pointer relative preserve-3d"
                 >
                   <div className="absolute inset-0 glass-card rounded-[2rem] p-10 flex flex-col items-center justify-center text-center backface-hidden">
@@ -755,7 +769,9 @@ export default function StudyPage() {
                       <div className="size-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                         <Frown className="size-6" />
                       </div>
-                      <span className="text-slate-900 font-bold text-lg">Powtórz później</span>
+                      <span className="text-slate-900 font-bold text-lg">
+                        Powtórz później
+                      </span>
                     </button>
                     <button
                       onClick={() => applyCardResult(true)}
@@ -781,9 +797,14 @@ export default function StudyPage() {
                 </div>
 
                 {!isSubmitted ? (
-                  <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="w-full max-w-md space-y-6"
+                  >
                     <div className="flex flex-col items-start gap-2">
-                      <label className="text-sm font-semibold text-slate-500 ml-1">Twoja odpowiedź</label>
+                      <label className="text-sm font-semibold text-slate-500 ml-1">
+                        Twoja odpowiedź
+                      </label>
                       <input
                         autoFocus
                         type="text"
@@ -866,9 +887,12 @@ const FeedbackView = ({
               <XCircle className="size-6" />
             </div>
             <div>
-              <h4 className="text-rose-900 font-bold text-lg">Jeszcze nie...</h4>
+              <h4 className="text-rose-900 font-bold text-lg">
+                Jeszcze nie...
+              </h4>
               <p className="text-rose-700">
-                Poprawna odpowiedź: <span className="font-bold underline italic">{solution}</span>
+                Poprawna odpowiedź:{" "}
+                <span className="font-bold underline italic">{solution}</span>
               </p>
             </div>
           </div>
